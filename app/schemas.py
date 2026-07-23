@@ -41,3 +41,11 @@ class SavedItemOut(BaseModel):
     failure_reason: str | None = None
     transcript: str | None = None
     created_at: datetime
+
+
+class SegmentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    start_time: float
+    end_time: float
+    text: str

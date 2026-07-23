@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cyrus - Personal Knowledge Companion</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-secondary-container": "#adb8d3",
+                    "on-secondary": "#263046",
+                    "on-tertiary": "#00344a",
+                    "on-background": "#e2e2e2",
+                    "secondary-container": "#3e4960",
+                    "on-error": "#690005",
+                    "inverse-primary": "#825500",
+                    "on-primary-fixed": "#291800",
+                    "error": "#ffb4ab",
+                    "surface-container-high": "#282a2b",
+                    "outline": "#9f8e7a",
+                    "on-secondary-fixed-variant": "#3c475d",
+                    "on-secondary-fixed": "#101b30",
+                    "inverse-on-surface": "#2f3131",
+                    "primary-container": "#f4a827",
+                    "surface": "#121414",
+                    "on-error-container": "#ffdad6",
+                    "surface-container-low": "#1a1c1c",
+                    "surface-bright": "#38393a",
+                    "surface-dim": "#121414",
+                    "surface-container": "#1e2020",
+                    "secondary-fixed-dim": "#bbc6e2",
+                    "primary-fixed-dim": "#ffb950",
+                    "outline-variant": "#524534",
+                    "surface-tint": "#ffb950",
+                    "surface-container-highest": "#333535",
+                    "inverse-surface": "#e2e2e2",
+                    "background": "#121414",
+                    "on-primary-fixed-variant": "#624000",
+                    "on-tertiary-fixed": "#001e2c",
+                    "on-tertiary-container": "#004e6b",
+                    "on-surface-variant": "#d6c4ae",
+                    "on-primary-container": "#644100",
+                    "secondary-fixed": "#d7e2ff",
+                    "surface-variant": "#333535",
+                    "tertiary-fixed": "#c4e7ff",
+                    "secondary": "#bbc6e2",
+                    "error-container": "#93000a",
+                    "primary": "#ffca80",
+                    "on-surface": "#e2e2e2",
+                    "tertiary": "#9edaff",
+                    "primary-fixed": "#ffddb3",
+                    "surface-container-lowest": "#0c0f0f",
+                    "tertiary-fixed-dim": "#7cd0ff",
+                    "on-primary": "#452b00",
+                    "tertiary-container": "#40c3ff",
+                    "on-tertiary-fixed-variant": "#004c69"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-md": "24px",
+                    "stack-lg": "48px",
+                    "unit": "8px",
+                    "container-padding": "24px",
+                    "gutter": "16px",
+                    "stack-sm": "8px"
+            },
+            "fontFamily": {
+                    "headline-md": ["DM Sans"],
+                    "body-md": ["DM Sans"],
+                    "display": ["DM Sans"],
+                    "headline-lg-mobile": ["DM Sans"],
+                    "label-sm": ["DM Sans"],
+                    "body-lg": ["DM Sans"],
+                    "headline-lg": ["DM Sans"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "28px", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "32px", "letterSpacing": "0.01em", "fontWeight": "300"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #121414;
+            color: #e2e2e2;
+            font-family: 'DM Sans', sans-serif;
+            overflow: hidden;
+        }
+
+        .carousel-track {
+            display: flex;
+            transition: transform 0.8s cubic-bezier(0.65, 0, 0.35, 1);
+            width: 500%;
+            height: 100vh;
+        }
+
+        .slide {
+            width: 20%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            width: 24px;
+            background-color: #ffca80;
+            border-radius: 12px;
+        }
+
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        /* Glassmorphism card effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+        }
+
+        .animated-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+            pointer-events: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="dark h-screen overflow-hidden">
+<!-- Subtle Background Shader -->
+<div class="animated-background">
+<!-- STITCH_THREEJS_START:ANIMATION_9 class="absolute inset-0 w-full h-full" -->
+<div class="absolute inset-0 w-full h-full" style="display:block;">
+<script src="https://ajax.googleapis.com/ajax/libs/threejs/r125/three.min.js"></script>
+<div id="threejs-container-ANIMATION_9" style="width:100%;height:100%"></div>
+<script>
+(function() {
+  const container = document.getElementById('threejs-container-ANIMATION_9');
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  const container = document.querySelector('threejs-scene');
+const width = container.clientWidth || window.innerWidth;
+const height = container.clientHeight || window.innerHeight;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+renderer.setSize(width, height);
+renderer.setPixelRatio(window.devicePixelRatio);
+container.appendChild(renderer.domElement);
+
+// Knowledge "Nodes"
+const nodes = [];
+const nodeCount = 40;
+const colors = [0xF4A827, 0xEAEAEA, 0x38393a];
+
+for (let i = 0; i < nodeCount; i++) {
+    const geometry = new THREE.SphereGeometry(Math.random() * 0.15 + 0.05, 16, 16);
+    const material = new THREE.MeshPhongMaterial({ 
+        color: colors[Math.floor(Math.random() * colors.length)],
+        transparent: true,
+        opacity: 0.8
+    });
+    const node = new THREE.Mesh(geometry, material);
+    
+    node.position.x = (Math.random() - 0.5) * 10;
+    node.position.y = (Math.random() - 0.5) * 10;
+    node.position.z = (Math.random() - 0.5) * 10;
+    
+    node.userData = {
+        velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.01,
+            (Math.random() - 0.5) * 0.01,
+            (Math.random() - 0.5) * 0.01
+        )
+    };
+    
+    scene.add(node);
+    nodes.push(node);
+}
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+scene.add(ambientLight);
+
+const pointLight = new THREE.PointLight(0xF4A827, 1);
+pointLight.position.set(5, 5, 5);
+scene.add(pointLight);
+
+camera.position.z = 5;
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    nodes.forEach(node => {
+        node.position.add(node.userData.velocity);
+        
+        // Bounce off bounds
+        if (Math.abs(node.position.x) > 5) node.userData.velocity.x *= -1;
+        if (Math.abs(node.position.y) > 5) node.userData.velocity.y *= -1;
+        if (Math.abs(node.position.z) > 5) node.userData.velocity.z *= -1;
+        
+        node.rotation.x += 0.01;
+        node.rotation.y += 0.01;
+    });
+    
+    scene.rotation.y += 0.002;
+    renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+    const w = container.clientWidth || window.innerWidth;
+    const h = container.clientHeight || window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h);
+});
+
+animate();
+})();
+</script>
+</div>
+<!-- STITCH_THREEJS_END:ANIMATION_9 -->
+</div>
+<!-- Main Navigation / Top App Bar (Suppressed but kept for Logo) -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-container-padding h-16 max-w-[1200px] mx-auto left-1/2 -translate-x-1/2">
+<div class="font-display text-headline-md text-primary tracking-tight font-bold">Cyrus</div>
+<div class="text-on-surface-variant font-label-sm text-label-sm tracking-widest uppercase">Knowledge Companion</div>
+</header>
+<!-- Carousel Container -->
+<main class="relative h-screen w-full overflow-hidden">
+<div class="carousel-track" id="carouselTrack" style="transform: translateX(0%);">
+<!-- Slide 1 -->
+<section class="slide">
+<div class="max-w-2xl px-6">
+<h1 class="font-display text-display text-primary mb-stack-sm">Cyrus</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-md mx-auto">Your second brain, built from what you actually consume.</p>
+</div>
+<div class="mt-12 w-full max-w-sm h-64 glass-card flex items-center justify-center p-8">
+<div class="relative w-full h-full">
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-[80px] text-primary/20">neurology</span>
+</div>
+<div class="absolute top-4 left-4 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">article</span>
+</div>
+<div class="absolute bottom-4 right-4 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">video_library</span>
+</div>
+<div class="absolute top-1/2 -right-2 w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">podcasts</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Slide 2 -->
+<section class="slide">
+<div class="max-w-2xl px-6">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Capture everything.</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-md mx-auto">Cyrus understands the rest. Effortless content transformation.</p>
+</div>
+<div class="mt-12 w-full max-w-lg grid grid-cols-2 gap-4">
+<div class="glass-card p-6 flex flex-col items-start gap-4">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<div class="text-left">
+<div class="font-label-sm text-label-sm text-on-surface mb-1">OCR Analysis</div>
+<div class="text-[10px] text-on-surface-variant">Extracting text from diagrams...</div>
+</div>
+</div>
+<div class="glass-card p-6 flex flex-col items-start gap-4 translate-y-8">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">transcribe</span>
+<div class="text-left">
+<div class="font-label-sm text-label-sm text-on-surface mb-1">Audio Synthesis</div>
+<div class="text-[10px] text-on-surface-variant">Converting podcast key moments...</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Slide 3 -->
+<section class="slide">
+<div class="max-w-2xl px-6">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Organized automatically.</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-md mx-auto">A living knowledge map that grows with every new connection.</p>
+</div>
+<div class="mt-12 w-full max-w-md h-72 relative">
+<!-- Concept: Knowledge Nodes -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 rounded-full border border-primary/30 flex items-center justify-center bg-primary/5">
+<div class="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
+<div class="w-4 h-4 bg-primary rounded-full animate-pulse"></div>
+</div>
+</div>
+<div class="absolute top-4 right-12 glass-card px-4 py-2 text-[12px] flex items-center gap-2">
+<span class="w-2 h-2 bg-primary rounded-full"></span> Philosophy
+                    </div>
+<div class="absolute bottom-12 left-4 glass-card px-4 py-2 text-[12px] flex items-center gap-2">
+<span class="w-2 h-2 bg-secondary rounded-full"></span> Tech Trends
+                    </div>
+<div class="absolute top-20 left-0 glass-card px-4 py-2 text-[12px] flex items-center gap-2">
+<span class="w-2 h-2 bg-on-tertiary-container rounded-full"></span> Design System
+                    </div>
+<!-- Connection lines would be handled by script or SVG if more complex -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none opacity-20">
+<line stroke="white" stroke-dasharray="4" stroke-width="1" x1="50%" x2="70%" y1="50%" y2="20%"></line>
+<line stroke="white" stroke-dasharray="4" stroke-width="1" x1="50%" x2="20%" y1="50%" y2="80%"></line>
+<line stroke="white" stroke-dasharray="4" stroke-width="1" x1="50%" x2="10%" y1="50%" y2="40%"></line>
+</svg>
+</div>
+</section>
+<!-- Slide 4 -->
+<section class="slide">
+<div class="max-w-2xl px-6">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Useful insights.</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-md mx-auto">Turn raw information into actionable wisdom instantly.</p>
+</div>
+<div class="mt-12 w-full max-w-md glass-card p-6 text-left">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-8 h-8 rounded bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container text-sm">summarize</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Synthesis Report</span>
+</div>
+<div class="space-y-3">
+<div class="h-2 w-3/4 bg-on-surface/10 rounded-full"></div>
+<div class="h-2 w-full bg-on-surface/10 rounded-full"></div>
+<div class="h-2 w-1/2 bg-on-surface/10 rounded-full"></div>
+</div>
+<div class="mt-8 flex gap-2">
+<div class="h-8 w-24 rounded-full bg-primary/10 border border-primary/20"></div>
+<div class="h-8 w-20 rounded-full bg-on-surface/5 border border-on-surface/10"></div>
+</div>
+</div>
+</section>
+<!-- Slide 5 -->
+<section class="slide">
+<div class="max-w-2xl px-6">
+<h2 class="font-headline-lg text-headline-lg text-on-surface mb-stack-sm">Ask anything.</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-md mx-auto mb-12">Query your own private database of knowledge with natural language.</p>
+<div class="relative w-full max-w-sm mx-auto mb-16">
+<div class="glass-card p-4 text-left text-on-surface-variant italic mb-4">
+                            "What were the core arguments about minimalism in the podcasts I saved last week?"
+                        </div>
+<div class="glass-card p-4 text-left border-primary/40 bg-primary/5">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary text-sm">smart_toy</span>
+<span class="font-label-sm text-label-sm text-primary">Cyrus Intelligence</span>
+</div>
+<div class="text-sm text-on-surface leading-relaxed">
+                                Based on your sources, the recurring themes were intentionality, cognitive load reduction, and the 'less but better' philosophy...
+                            </div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Pagination Dots -->
+<div class="fixed bottom-24 left-0 w-full flex justify-center z-50 px-container-padding">
+<button class="bg-primary text-on-primary font-display font-bold text-body-lg px-12 py-4 rounded-full flex items-center gap-3 transition-all active:scale-95 shadow-lg shadow-primary/20 hover:bg-primary-fixed-dim">
+    Get Started
+    <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div><div class="fixed bottom-12 left-0 w-full flex justify-center gap-3 z-50">
+<div class="dot active" data-index="0"></div>
+<div class="dot" data-index="1"></div>
+<div class="dot" data-index="2"></div>
+<div class="dot" data-index="3"></div>
+<div class="dot" data-index="4"></div>
+</div>
+<!-- Progress Indicator -->
+<div class="fixed bottom-0 left-0 w-full h-1 bg-surface-container-low z-50">
+<div class="h-full bg-primary/40 w-0 transition-all duration-100 linear" id="progressBar" style="width: 42.5%;"></div>
+</div>
+</main>
+<script>
+        const track = document.getElementById('carouselTrack');
+        const dots = document.querySelectorAll('.dot');
+        const progressBar = document.getElementById('progressBar');
+        const slideCount = 5;
+        let currentSlide = 0;
+        const intervalTime = 4000;
+        let progressInterval;
+        let startTime;
+
+        function updateCarousel() {
+            track.style.transform = `translateX(-${currentSlide * 20}%)`;
+            
+            dots.forEach((dot, index) => {
+                if (index === currentSlide) {
+                    dot.classList.add('active');
+                } else {
+                    dot.classList.remove('active');
+                }
+            });
+
+            // Reset progress bar
+            resetProgress();
+        }
+
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % slideCount;
+            updateCarousel();
+        }
+
+        function resetProgress() {
+            clearInterval(progressInterval);
+            let progress = 0;
+            const step = 100 / (intervalTime / 100);
+            
+            progressInterval = setInterval(() => {
+                progress += step;
+                progressBar.style.width = `${progress}%`;
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                }
+            }, 100);
+        }
+
+        // Initialize Carousel
+        let slideTimer = setInterval(nextSlide, intervalTime);
+        resetProgress();
+
+        // Manual Navigation (Optional enhancement)
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => {
+                clearInterval(slideTimer);
+                currentSlide = index;
+                updateCarousel();
+                slideTimer = setInterval(nextSlide, intervalTime);
+            });
+        });
+
+        // Interactive Button Logic (Mock Navigation)
+        document.querySelector('button').addEventListener('click', () => {
+            alert('Welcome to Cyrus. Initializing knowledge engine...');
+        });
+    </script>
+</body></html>

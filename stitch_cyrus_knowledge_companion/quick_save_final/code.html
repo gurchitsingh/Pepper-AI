@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Cyrus - Quick Save</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#ffca80",
+                    "error": "#ffb4ab",
+                    "surface-container-low": "#1a1c1c",
+                    "on-primary": "#452b00",
+                    "secondary": "#bbc6e2",
+                    "surface-tint": "#ffb950",
+                    "primary-fixed-dim": "#ffb950",
+                    "surface-container-lowest": "#0c0f0f",
+                    "on-tertiary-container": "#004e6b",
+                    "on-secondary-fixed": "#101b30",
+                    "on-surface-variant": "#d6c4ae",
+                    "on-secondary-container": "#adb8d3",
+                    "background": "#121414",
+                    "on-primary-fixed": "#291800",
+                    "inverse-on-surface": "#2f3131",
+                    "tertiary-container": "#40c3ff",
+                    "surface": "#121414",
+                    "secondary-fixed": "#d7e2ff",
+                    "tertiary-fixed": "#c4e7ff",
+                    "outline-variant": "#524534",
+                    "tertiary": "#9edaff",
+                    "surface-container-highest": "#333535",
+                    "outline": "#9f8e7a",
+                    "on-tertiary-fixed-variant": "#004c69",
+                    "on-error-container": "#ffdad6",
+                    "surface-dim": "#121414",
+                    "primary-fixed": "#ffddb3",
+                    "on-secondary": "#263046",
+                    "on-primary-container": "#644100",
+                    "inverse-primary": "#825500",
+                    "error-container": "#93000a",
+                    "on-primary-fixed-variant": "#624000",
+                    "secondary-container": "#3e4960",
+                    "primary-container": "#f4a827",
+                    "surface-bright": "#38393a",
+                    "surface-variant": "#333535",
+                    "tertiary-fixed-dim": "#7cd0ff",
+                    "on-surface": "#e2e2e2",
+                    "secondary-fixed-dim": "#bbc6e2",
+                    "on-secondary-fixed-variant": "#3c475d",
+                    "surface-container-high": "#282a2b",
+                    "on-tertiary-fixed": "#001e2c",
+                    "on-background": "#e2e2e2",
+                    "on-error": "#690005",
+                    "surface-container": "#1e2020",
+                    "inverse-surface": "#e2e2e2",
+                    "on-tertiary": "#00344a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "unit": "8px",
+                    "container-padding": "24px",
+                    "stack-md": "24px",
+                    "gutter": "16px",
+                    "stack-lg": "48px",
+                    "stack-sm": "8px"
+            },
+            "fontFamily": {
+                    "headline-md": ["DM Sans"],
+                    "body-md": ["DM Sans"],
+                    "label-sm": ["DM Sans"],
+                    "headline-lg-mobile": ["DM Sans"],
+                    "headline-lg": ["DM Sans"],
+                    "body-lg": ["DM Sans"],
+                    "display": ["DM Sans"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "28px", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "32px", "letterSpacing": "0.01em", "fontWeight": "300"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #121414;
+            color: #e2e2e2;
+            -webkit-font-smoothing: antialiased;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: #1a1c1c;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:active {
+            transform: scale(0.98);
+            background: #282a2b;
+        }
+        .active-glow {
+            box-shadow: 0 0 20px rgba(255, 185, 80, 0.3);
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="min-h-screen flex flex-col font-body-md overflow-x-hidden">
+<!-- Top AppBar -->
+<header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md">
+<div class="flex justify-between items-center px-container-padding h-16 w-full max-w-[1200px] mx-auto">
+<div class="flex items-center gap-3">
+<h1 class="font-display text-primary text-[36px] font-bold tracking-tight">Save</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-highest border border-white/10">
+<img class="w-full h-auto" data-alt="User Avatar" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCtg0lbJYzGKPO5pBeWpdLYw2xmPdnyXzsj61m4K6QIK92TyWxY4665zPSz99P7kVRDHJxKUad9RQTCud9O6EosXfJ_LUYEIS7_06w_RN1RGipKqCaMgznYKWsz1hk6oy6B2NlE4J0Wj8u9xj3ra5SBFgKSbmswz4NAVxmn7pts5VHgbJl6qWleoZvQOW24e0MUTcpYPjpBmGigeK37BLhFtpel6Y5uKSqtVASZV-5Lz5J23PdUQIwTbnOQcW6CirLRU-mSzeGw2GA"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex items-center justify-center pt-24 pb-32 px-container-padding max-w-[600px] mx-auto w-full">
+<!-- Vertical Stacked Cards -->
+<div class="flex flex-col gap-unit w-full">
+<!-- Capture Card -->
+<button class="glass-card rounded-[24px] flex flex-col items-center justify-center p-stack-lg min-h-[360px] group w-full mb-4">
+<div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary text-[32px]">photo_camera</span>
+</div>
+<h2 class="font-headline-lg text-on-surface mb-2">Capture</h2>
+<p class="font-body-md text-on-surface-variant text-center px-4">Instant screenshots and document scanning.</p>
+</button>
+<!-- Quick Thought Card -->
+<button class="glass-card rounded-[24px] flex flex-col items-center justify-center p-stack-lg min-h-[360px] group w-full mb-4">
+<div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary text-[32px]">edit_note</span>
+</div>
+<h2 class="font-headline-lg text-on-surface mb-2">Quick Thought</h2>
+<p class="font-body-md text-on-surface-variant text-center px-4">Transcribe your fleeting insights instantly.</p>
+</button>
+<!-- Voice Note Card -->
+<button class="glass-card rounded-[24px] flex flex-col items-center justify-center p-stack-lg min-h-[360px] group w-full mb-4">
+<div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary text-[32px]">mic</span>
+</div>
+<h2 class="font-headline-lg text-on-surface mb-2">Voice Note</h2>
+<p class="font-body-md text-on-surface-variant text-center px-4">Capture audio and auto-transcribe to text.</p>
+</button>
+<!-- Paste Link Card -->
+<button class="glass-card rounded-[24px] flex flex-col items-center justify-center p-stack-lg min-h-[360px] group w-full mb-4">
+<div class="w-16 h-16 rounded-full bg-surface-container-highest flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-primary text-[32px]">link</span>
+</div>
+<h2 class="font-headline-lg text-on-surface mb-2">Paste Link</h2>
+<p class="font-body-md text-on-surface-variant text-center px-4">Save URLs for later deep-learning analysis.</p>
+</button>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-[#1e2020] border-t border-white/5">
+<div class="flex justify-around items-center px-2 py-3 pb-safe max-w-[600px] mx-auto"><a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors flex-1" href="#"><span class="material-symbols-outlined text-[24px] mb-1">home</span><span class="font-label-sm text-[11px]">Home</span></a><a class="flex flex-col items-center justify-center flex-1" href="#"><div class="bg-primary text-on-primary rounded-[20px] px-6 py-1 mb-1 active-glow"><span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">bookmark</span></div><span class="font-label-sm text-primary text-[11px] font-bold">Save</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors flex-1" href="#"><span class="material-symbols-outlined text-[24px] mb-1">database</span><span class="font-label-sm text-[11px]">Libraries</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors flex-1" href="#"><span class="material-symbols-outlined text-[24px] mb-1">insights</span><span class="font-label-sm text-[11px]">Insights</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors flex-1" href="#"><span class="material-symbols-outlined text-[24px] mb-1">chat_bubble</span><span class="font-label-sm text-[11px]">Chat</span></a><a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-colors flex-1" href="#"><span class="material-symbols-outlined text-[24px] mb-1">settings</span><span class="font-label-sm text-[11px]">Settings</span></a></div>
+</nav>
+</body></html>

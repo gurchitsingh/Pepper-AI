@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Cyrus | Knowledge Chat</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary": "#ffca80",
+                    "on-primary-container": "#644100",
+                    "primary-fixed": "#ffddb3",
+                    "tertiary-fixed": "#c4e7ff",
+                    "surface-container": "#1e2020",
+                    "inverse-on-surface": "#2f3131",
+                    "surface-container-low": "#1a1c1c",
+                    "outline-variant": "#524534",
+                    "tertiary-container": "#40c3ff",
+                    "inverse-primary": "#825500",
+                    "secondary-fixed-dim": "#bbc6e2",
+                    "on-secondary-fixed-variant": "#3c475d",
+                    "on-surface": "#e2e2e2",
+                    "on-primary-fixed": "#291800",
+                    "on-tertiary-container": "#004e6b",
+                    "on-error-container": "#ffdad6",
+                    "inverse-surface": "#e2e2e2",
+                    "primary-container": "#f4a827",
+                    "secondary-fixed": "#d7e2ff",
+                    "error": "#ffb4ab",
+                    "surface-container-high": "#282a2b",
+                    "surface-container-highest": "#333535",
+                    "on-secondary": "#263046",
+                    "surface-bright": "#38393a",
+                    "on-secondary-fixed": "#101b30",
+                    "outline": "#9f8e7a",
+                    "secondary": "#bbc6e2",
+                    "secondary-container": "#3e4960",
+                    "on-background": "#e2e2e2",
+                    "on-secondary-container": "#adb8d3",
+                    "tertiary": "#9edaff",
+                    "on-primary-fixed-variant": "#624000",
+                    "background": "#121414",
+                    "surface-tint": "#ffb950",
+                    "on-tertiary-fixed-variant": "#004c69",
+                    "tertiary-fixed-dim": "#7cd0ff",
+                    "on-tertiary": "#00344a",
+                    "on-surface-variant": "#d6c4ae",
+                    "surface": "#121414",
+                    "primary-fixed-dim": "#ffb950",
+                    "on-primary": "#452b00",
+                    "surface-dim": "#121414",
+                    "on-error": "#690005",
+                    "surface-variant": "#333535",
+                    "on-tertiary-fixed": "#001e2c",
+                    "surface-container-lowest": "#0c0f0f",
+                    "error-container": "#93000a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-sm": "8px",
+                    "gutter": "16px",
+                    "container-padding": "24px",
+                    "unit": "8px",
+                    "stack-md": "24px",
+                    "stack-lg": "48px"
+            },
+            "fontFamily": {
+                    "label-sm": ["DM Sans"],
+                    "headline-lg": ["DM Sans"],
+                    "display": ["DM Sans"],
+                    "headline-lg-mobile": ["DM Sans"],
+                    "headline-md": ["DM Sans"],
+                    "body-md": ["DM Sans"],
+                    "body-lg": ["DM Sans"]
+            },
+            "fontSize": {
+                    "label-sm": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "display": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.01em", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "500"}],
+                    "body-md": ["16px", {"lineHeight": "28px", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "32px", "letterSpacing": "0.01em", "fontWeight": "300"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #121414; /* background color from config */
+            color: #e2e2e2; /* on-surface */
+            font-family: 'DM Sans', sans-serif;
+            overflow-x: hidden;
+            min-height: 100dvh;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 32, 32, 0.7) 0%, rgba(18, 20, 20, 0.9) 100%);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .chat-bubble-ai {
+            border-bottom-left-radius: 4px;
+        }
+        .chat-bubble-user {
+            border-bottom-right-radius: 4px;
+        }
+        .nav-indicator {
+            height: 3px;
+            width: 24px;
+            background-color: #ffca80;
+            border-radius: 99px;
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+        .nav-active .nav-indicator {
+            opacity: 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="dark flex flex-col min-h-screen">
+<!-- Top AppBar -->
+<header class="bg-surface/80 backdrop-blur-xl w-full sticky top-0 z-40 transition-opacity duration-200">
+<div class="flex items-center px-gutter h-16 w-full max-w-[1200px] mx-auto justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" style="font-size: 28px;">bubble_chart</span>
+<h1 class="font-headline-md text-headline-md text-on-surface font-bold">Chat</h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-white/10">
+<img class="w-full h-full object-cover" data-alt="A professional high-end portrait of a person" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALmmz1J3x3RtXzEbNpQEtg2EXfkdBTLopx727qiphea5tnZmm5xt5RO2PKjI8qwkQNm_-UVYi7tF4BYkKbb1QnWlJKXFSX-dSZwk95TCAUiW6QqgIV-0BuchSZSlUVb2Fk1t7DdS-ZfS_Yax8zukF_OjoTn1h4VxS4BPR2-LZmZyu6uYzmhBKhAetamN6r09p9qDm5TW5RAqUCkDi9kTBpj9Z4KjoKkwzeG4dAPWmbQaaPuNNXF7sg4_FnKvXlejB8rX4CEkO8rZU"/>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow w-full max-w-[800px] mx-auto px-gutter pb-40">
+<!-- Welcome / Suggestion Area -->
+<section class="py-stack-lg space-y-stack-md">
+<div class="space-y-2">
+<p class="font-body-md text-on-surface-variant font-medium">Welcome back, Alex. Your knowledge graph is synchronized.</p>
+<h2 class="font-display text-headline-lg-mobile md:text-display text-on-surface">How can I assist your deep work today?</h2>
+</div>
+<div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2">
+<button class="flex-shrink-0 px-5 py-3 rounded-full glass-card hover:border-primary/40 transition-all group">
+<span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-primary">What did I learn about startups this week?</span>
+</button>
+<button class="flex-shrink-0 px-5 py-3 rounded-full glass-card hover:border-primary/40 transition-all group">
+<span class="font-label-sm text-label-sm text-on-surface-variant group-hover:text-primary">Summarize my voice notes from Monday</span>
+</button>
+</div>
+</section>
+<!-- Chat Log -->
+<div class="space-y-stack-lg">
+<!-- AI Message -->
+<div class="flex gap-4 items-start max-w-[85%]">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center flex-shrink-0 border border-white/5 shadow-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">bubble_chart</span>
+</div>
+<div class="space-y-2">
+<div class="glass-card p-4 rounded-2xl chat-bubble-ai">
+<p class="font-body-md text-on-surface">I've synthesized your recent activity. This week you focused heavily on **Product-Market Fit** frameworks. Would you like me to map the commonalities between the three podcasts you saved on Wednesday?</p>
+</div>
+<span class="text-[10px] uppercase font-bold tracking-[0.1em] text-on-surface-variant/60 ml-1">Cyrus Assistant • Just now</span>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex gap-4 items-start flex-row-reverse max-w-[85%] ml-auto">
+<div class="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center flex-shrink-0 border border-primary/20">
+<span class="material-symbols-outlined text-primary text-[20px]">person</span>
+</div>
+<div class="space-y-2 text-right">
+<div class="bg-surface-container-highest p-4 rounded-2xl chat-bubble-user border border-white/5 shadow-md">
+<p class="font-body-md text-on-surface">Yes, please. Also connect it to my notes about the 'Lean Startup' methodology from last month.</p>
+</div>
+<span class="text-[10px] uppercase font-bold tracking-[0.1em] text-on-surface-variant/60 mr-1">Alex • 2m ago</span>
+</div>
+</div>
+<!-- AI Detailed Knowledge Node Message -->
+<div class="flex gap-4 items-start max-w-[90%]">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high flex items-center justify-center flex-shrink-0 border border-white/5">
+<span class="material-symbols-outlined text-primary text-[20px]">bubble_chart</span>
+</div>
+<div class="space-y-4 w-full">
+<div class="glass-card p-5 rounded-2xl chat-bubble-ai space-y-4 shadow-lg">
+<p class="font-body-md text-on-surface">Integrating notes... I've identified a core contradiction in your recent inputs compared to 'Lean Startup' principles:</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div class="bg-surface-container-low p-4 rounded-xl border border-white/5 hover:border-primary/30 transition-all duration-300">
+<span class="text-[10px] text-primary font-bold uppercase tracking-wider block mb-2">Lean Startup (1998)</span>
+<p class="font-body-md text-sm text-on-surface-variant leading-relaxed">Prioritize MVP speed over polished aesthetics to validate core value propositions quickly.</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-xl border border-white/5 hover:border-tertiary/30 transition-all duration-300">
+<span class="text-[10px] text-tertiary font-bold uppercase tracking-wider block mb-2">Podcast Fragment (2024)</span>
+<p class="font-body-md text-sm text-on-surface-variant leading-relaxed">In the "Cerebral Tech" era, premium UI is no longer a luxury but a signal of reliability.</p>
+</div>
+</div>
+<p class="font-body-md text-on-surface">You might want to reconsider your current sprint goals for the 'Project Aura' UI based on this tension.</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-[10px] uppercase font-bold tracking-[0.1em] text-on-surface-variant/60 ml-1">Cyrus Assistant • 1m ago</span>
+<div class="flex gap-1.5 ml-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse delay-75"></span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse delay-150"></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Input Area (Sticky Overlay) -->
+<div class="fixed bottom-[72px] md:bottom-24 left-0 w-full px-4 pb-4 z-30">
+<div class="max-w-[800px] mx-auto relative group">
+<div class="absolute -inset-1 bg-gradient-to-r from-primary/20 to-tertiary/20 rounded-2xl blur-xl group-focus-within:opacity-100 opacity-0 transition-opacity duration-700"></div>
+<div class="relative flex items-center bg-surface-container-highest/95 backdrop-blur-3xl rounded-2xl border border-white/10 p-2 shadow-2xl overflow-hidden">
+<button class="p-3 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+<input class="flex-grow bg-transparent border-none focus:ring-0 text-on-surface placeholder-on-surface-variant/40 font-body-md px-2 py-3" placeholder="Ask anything about what you've saved..." type="text"/>
+<div class="flex items-center gap-2 pr-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">mic</span>
+</button>
+<button class="w-11 h-11 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-lg hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined font-bold">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pt-3 pb-safe bg-surface-container-lowest/90 backdrop-blur-2xl border-t border-white/5 shadow-[0_-8px_30px_rgba(0,0,0,0.3)] h-16 md:h-20"><!-- Home -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all relative group" href="#">
+<span class="material-symbols-outlined text-[24px]">home</span>
+<span class="font-label-sm text-[10px] uppercase font-bold tracking-widest mt-1">Home</span>
+<div class="nav-indicator bg-primary/40"></div>
+</a>
+<!-- Save -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all relative group" href="#">
+<span class="material-symbols-outlined text-[24px]">bookmark</span>
+<span class="font-label-sm text-[10px] uppercase font-bold tracking-widest mt-1">Save</span>
+<div class="nav-indicator bg-primary/40"></div>
+</a>
+<!-- Libraries -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all relative group" href="#">
+<span class="material-symbols-outlined text-[24px]">database</span>
+<span class="font-label-sm text-[10px] uppercase font-bold tracking-widest mt-1">Libraries</span>
+<div class="nav-indicator bg-primary/40"></div>
+</a>
+<!-- Insights -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all relative group" href="#">
+<span class="material-symbols-outlined text-[24px]">insights</span>
+<span class="font-label-sm text-[10px] uppercase font-bold tracking-widest mt-1">Insights</span>
+<div class="nav-indicator bg-primary/40"></div>
+</a>
+<!-- Chat (Active) -->
+<a class="flex flex-col items-center justify-center text-primary transition-all relative group nav-active" href="#">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">chat_bubble</span>
+<span class="font-label-sm text-[10px] uppercase font-bold tracking-widest mt-1">Chat</span>
+<div class="nav-indicator"></div>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all relative group" href="#">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+<span class="font-label-sm text-[10px] uppercase font-bold tracking-widest mt-1">Settings</span>
+<div class="nav-indicator bg-primary/40"></div>
+</a></nav>
+<!-- Visual Embellishment -->
+<div class="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 overflow-hidden">
+<div class="absolute top-[-15%] right-[-10%] w-[70%] h-[70%] rounded-full bg-primary/5 blur-[140px]"></div>
+<div class="absolute bottom-[-10%] left-[-15%] w-[60%] h-[60%] rounded-full bg-tertiary/5 blur-[120px]"></div>
+</div>
+<script>
+        // Simple micro-interaction for the send button
+        const sendBtn = document.querySelector('button .material-symbols-outlined:contains("send")')?.parentElement;
+        if (sendBtn) {
+            sendBtn.addEventListener('click', () => {
+                const input = document.querySelector('input');
+                if (input.value.trim() !== '') {
+                    input.value = '';
+                }
+            });
+        }
+
+        // Knowledge Node interactions
+        document.querySelectorAll('.bg-surface-container-low').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                el.classList.add('shadow-xl');
+            });
+            el.addEventListener('mouseleave', () => {
+                el.classList.remove('shadow-xl');
+            });
+        });
+    </script>
+</body></html>
