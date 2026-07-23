@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: weave_ai_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: weave_user
+      POSTGRES_PASSWORD: weave_password
+      POSTGRES_DB: weave_ai_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - weave_pgdata:/var/lib/postgresql/data
+
+volumes:
+  weave_pgdata:
