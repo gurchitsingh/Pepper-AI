@@ -20,9 +20,14 @@ class Token(BaseModel):
     token_type: str = "bearer"
 
 
+class OAuthLogin(BaseModel):
+    id_token: str
+
+
 class SavedItemCreate(BaseModel):
     source_type: str
     source_url: str | None = None
+    content: str | None = None  # required when source_type == "note": the note text itself
 
 
 class SavedItemOut(BaseModel):
@@ -33,4 +38,6 @@ class SavedItemOut(BaseModel):
     source_url: str | None
     title: str | None
     status: str
+    failure_reason: str | None = None
+    transcript: str | None = None
     created_at: datetime

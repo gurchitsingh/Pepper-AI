@@ -1,14 +1,36 @@
+import os
+import shutil
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.models.models import SavedItem, User
+from app.ingestion.tasks import process_saved_item
+from app.models.models import SavedItem, Transcript, User
+from app.queue import ingestion_queue
 from app.schemas import SavedItemCreate, SavedItemOut
 
 router = APIRouter(prefix="/saved-items", tags=["saved-items"])
+
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
+UPLOAD_SOURCE_TYPES = {"instagram", "tiktok", "voice_note"}
+
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def _to_out(item: SavedItem, transcript_text: str | None) -> SavedItemOut:
+    return SavedItemOut(
+        id=item.id,
+        source_type=item.source_type,
+        source_url=item.source_url,
+        title=item.title,
+        status=item.status,
+        failure_reason=item.failure_reason,
+        transcript=transcript_text,
+        created_at=item.created_at,
+    )
 
 
 @router.post("", response_model=SavedItemOut, status_code=status.HTTP_201_CREATED)
@@ -17,11 +39,62 @@ def create_saved_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    item = SavedItem(user_id=current_user.id, source_type=payload.source_type, source_url=payload.source_url)
+    if payload.source_type == "note":
+        if not payload.content or not payload.content.strip():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="content is required for note items")
+
+        item = SavedItem(user_id=current_user.id, source_type="note", status="ready")
+        db.add(item)
+        db.flush()
+        db.add(Transcript(saved_item_id=item.id, raw_text=payload.content))
+        db.commit()
+        db.refresh(item)
+        return _to_out(item, payload.content)
+
+    item = SavedItem(
+        user_id=current_user.id,
+        source_type=payload.source_type,
+        source_url=payload.source_url,
+        status="pending",
+    )
     db.add(item)
     db.commit()
     db.refresh(item)
-    return item
+
+    ingestion_queue.enqueue(process_saved_item, str(item.id))
+    return _to_out(item, None)
+
+
+@router.post("/upload", response_model=SavedItemOut, status_code=status.HTTP_201_CREATED)
+def upload_saved_item(
+    source_type: str = Form(...),
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if source_type not in UPLOAD_SOURCE_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"source_type for uploads must be one of {sorted(UPLOAD_SOURCE_TYPES)}",
+        )
+
+    safe_name = os.path.basename(file.filename or "upload")
+    dest_path = os.path.join(UPLOAD_DIR, f"{uuid.uuid4()}_{safe_name}")
+    with open(dest_path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
+
+    item = SavedItem(
+        user_id=current_user.id,
+        source_type=source_type,
+        uploaded_file_path=dest_path,
+        status="pending",
+    )
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+
+    ingestion_queue.enqueue(process_saved_item, str(item.id))
+    return _to_out(item, None)
 
 
 @router.get("", response_model=list[SavedItemOut])
@@ -29,12 +102,17 @@ def list_saved_items(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
+    items = (
         db.query(SavedItem)
         .filter(SavedItem.user_id == current_user.id)
         .order_by(SavedItem.created_at.desc())
         .all()
     )
+    item_ids = [item.id for item in items]
+    transcripts = db.query(Transcript).filter(Transcript.saved_item_id.in_(item_ids)).all()
+    transcript_by_item = {t.saved_item_id: t.raw_text for t in transcripts}
+
+    return [_to_out(item, transcript_by_item.get(item.id)) for item in items]
 
 
 @router.get("/{item_id}", response_model=SavedItemOut)
@@ -50,4 +128,6 @@ def get_saved_item(
     )
     if item is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved item not found")
-    return item
+
+    transcript = db.query(Transcript).filter(Transcript.saved_item_id == item.id).first()
+    return _to_out(item, transcript.raw_text if transcript else None)
