@@ -49,3 +49,21 @@ class SegmentOut(BaseModel):
     start_time: float
     end_time: float
     text: str
+
+
+class ChatRequest(BaseModel):
+    question: str
+
+
+class ChatSource(BaseModel):
+    saved_item_id: uuid.UUID
+    title: str | None
+    source_type: str
+    chunk_text: str
+    start_time: float | None
+    end_time: float | None
+
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: list[ChatSource]

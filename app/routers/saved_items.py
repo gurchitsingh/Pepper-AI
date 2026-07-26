@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
 from app.database import get_db
-from app.ingestion.tasks import process_saved_item
+from app.ingestion.tasks import process_saved_item, store_chunks
 from app.models.models import SavedItem, Transcript, TranscriptSegment, User
 from app.queue import ingestion_queue
 from app.schemas import SavedItemCreate, SavedItemOut, SegmentOut
@@ -15,7 +15,7 @@ from app.schemas import SavedItemCreate, SavedItemOut, SegmentOut
 router = APIRouter(prefix="/saved-items", tags=["saved-items"])
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
-UPLOAD_SOURCE_TYPES = {"instagram", "tiktok", "voice_note"}
+UPLOAD_SOURCE_TYPES = {"instagram", "tiktok", "voice_note", "document"}
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -47,6 +47,7 @@ def create_saved_item(
         db.add(item)
         db.flush()
         db.add(Transcript(saved_item_id=item.id, raw_text=payload.content))
+        store_chunks(db, item.id, payload.content, segments=[])
         db.commit()
         db.refresh(item)
         return _to_out(item, payload.content)

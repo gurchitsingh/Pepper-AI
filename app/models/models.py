@@ -1,8 +1,11 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Float, ForeignKey, Index, Text
+from sqlalchemy import Column, String, DateTime, Float, ForeignKey, Index, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
+from pgvector.sqlalchemy import Vector
 from app.database import Base
+
+EMBEDDING_DIM = 1024  # voyage-4-large default output dimension
 
 
 def utcnow():
@@ -67,3 +70,16 @@ class TranscriptSegment(Base):
     start_time = Column(Float, nullable=False)
     end_time = Column(Float, nullable=False)
     text = Column(Text, nullable=False)
+
+
+class Chunk(Base):
+    __tablename__ = "chunks"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    saved_item_id = Column(UUID(as_uuid=True), ForeignKey("saved_items.id"), nullable=False, index=True)
+    text = Column(Text, nullable=False)
+    start_time = Column(Float, nullable=True)
+    end_time = Column(Float, nullable=True)
+    chunk_index = Column(Integer, nullable=False)
+    embedding = Column(Vector(EMBEDDING_DIM), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)

@@ -5,6 +5,7 @@ import tempfile
 from faster_whisper import WhisperModel
 
 from app.ingestion.common import IngestResult, IngestionError, Segment
+from app.ingestion.transliteration import transliterate_devanagari
 
 WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small")
 
@@ -39,7 +40,7 @@ def transcribe_audio(audio_path: str) -> IngestResult:
 
     segments = []
     for seg in whisper_segments:
-        seg_text = seg.text.strip()
+        seg_text = transliterate_devanagari(seg.text.strip())
         if seg_text:
             segments.append(Segment(start=seg.start, end=seg.end, text=seg_text))
 
