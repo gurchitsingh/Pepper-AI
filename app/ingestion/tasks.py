@@ -99,6 +99,10 @@ def process_saved_item(saved_item_id: str) -> None:
 
         if result.title:
             item.title = result.title
+        if result.segments:
+            # last segment's end time as a duration proxy -- avoids a second ffprobe
+            # call since Whisper/YouTube segments are already computed above.
+            item.duration_seconds = max(seg.end for seg in result.segments)
         item.status = "ready"
         db.commit()
     finally:

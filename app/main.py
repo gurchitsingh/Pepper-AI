@@ -1,13 +1,19 @@
 from fastapi import FastAPI
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from app.database import engine
-from app.routers import auth, chat, saved_items
+from app.rate_limit import limiter
+from app.routers import auth, billing, chat, saved_items
 
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(auth.router)
 app.include_router(saved_items.router)
 app.include_router(chat.router)
+app.include_router(billing.router)
 
 @app.get("/health")
 def health_check():

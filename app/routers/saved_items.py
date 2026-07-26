@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, s
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
+from app.billing import check_usage_allowed
 from app.database import get_db
 from app.ingestion.tasks import process_saved_item, store_chunks
 from app.models.models import SavedItem, Transcript, TranscriptSegment, User
@@ -29,6 +30,7 @@ def _to_out(item: SavedItem, transcript_text: str | None) -> SavedItemOut:
         status=item.status,
         failure_reason=item.failure_reason,
         transcript=transcript_text,
+        duration_seconds=item.duration_seconds,
         created_at=item.created_at,
     )
 
@@ -39,6 +41,8 @@ def create_saved_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    check_usage_allowed(db, current_user)
+
     if payload.source_type == "note":
         if not payload.content or not payload.content.strip():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="content is required for note items")
@@ -73,6 +77,8 @@ def upload_saved_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    check_usage_allowed(db, current_user)
+
     if source_type not in UPLOAD_SOURCE_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

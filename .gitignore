@@ -4,4 +4,6 @@ __pycache__/
 .env
 .DS_Store
 uploads/
-CLAUDE.mdstitch_cyrus_knowledge_companion/
+CLAUDE.md
+stitch_cyrus_knowledge_companion/
+tessdata_local/

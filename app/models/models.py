@@ -21,6 +21,7 @@ class User(Base):
     hashed_password = Column(String, nullable=True)
     oauth_provider = Column(String, nullable=True)
     oauth_provider_id = Column(String, nullable=True)
+    plan = Column(String, nullable=False, default="free", server_default="free")
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     __table_args__ = (
@@ -43,6 +44,7 @@ class SavedItem(Base):
     source_url = Column(String, nullable=True)
     uploaded_file_path = Column(String, nullable=True)
     title = Column(String, nullable=True)
+    duration_seconds = Column(Float, nullable=True)
     status = Column(String, nullable=False, default="pending")
     failure_reason = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)

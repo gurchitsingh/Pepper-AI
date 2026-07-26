@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, ConfigDict
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
 
 
 class UserSignup(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
     name: str | None = None
 
 
@@ -40,6 +40,7 @@ class SavedItemOut(BaseModel):
     status: str
     failure_reason: str | None = None
     transcript: str | None = None
+    duration_seconds: float | None = None
     created_at: datetime
 
 
@@ -67,3 +68,12 @@ class ChatSource(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sources: list[ChatSource]
+
+
+class BillingStatusOut(BaseModel):
+    plan: str
+    short_form_seconds: float
+    long_form_seconds: float
+    total_seconds: float
+    limit_seconds: float | None
+    over_limit: bool
