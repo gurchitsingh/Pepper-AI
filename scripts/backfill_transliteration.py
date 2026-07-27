@@ -4,7 +4,8 @@ pipeline now does going forward. Safe to re-run -- rows with no Devanagari are s
 """
 import sys
 
-sys.path.insert(0, r"C:\Users\user\OneDrive\Desktop\Pepper AI\Weave AI")
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.database import SessionLocal
 from app.ingestion.transliteration import DEVANAGARI_RE, transliterate_devanagari

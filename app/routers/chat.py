@@ -1,8 +1,9 @@
 import os
 
-import anthropic
+import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status
+from google.api_core.exceptions import GoogleAPIError
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -16,8 +17,10 @@ load_dotenv()
 
 router = APIRouter(tags=["chat"])
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
-CLAUDE_MODEL = "claude-sonnet-5"
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# "latest" alias (not a pinned version) so Google retiring a specific dated model
+# doesn't silently 404 this endpoint again -- see chat_model_choice in CLAUDE.md.
+GEMINI_MODEL = "gemini-flash-latest"
 TOP_K = 5
 
 SYSTEM_PROMPT = (
@@ -36,10 +39,10 @@ def chat(
     if not payload.question or not payload.question.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="question is required")
 
-    if not ANTHROPIC_API_KEY:
+    if not GOOGLE_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="ANTHROPIC_API_KEY is not set in .env. Get one at https://console.anthropic.com/settings/keys",
+            detail="GOOGLE_API_KEY is not set in .env. Get one at https://aistudio.google.com/apikey",
         )
 
     try:
@@ -74,13 +77,12 @@ def chat(
     context = "\n\n---\n\n".join(context_blocks)
     user_message = f"Context from the user's saved content:\n\n{context}\n\nQuestion: {payload.question}"
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
-    message = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    answer = "".join(block.text for block in message.content if block.type == "text")
+    genai.configure(api_key=GOOGLE_API_KEY)
+    model = genai.GenerativeModel(GEMINI_MODEL, system_instruction=SYSTEM_PROMPT)
+    try:
+        response = model.generate_content(user_message)
+    except GoogleAPIError as e:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Gemini request failed: {e}")
+    answer = response.text
 
     return ChatResponse(answer=answer, sources=sources)
