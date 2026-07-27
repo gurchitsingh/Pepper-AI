@@ -83,5 +83,7 @@ class Chunk(Base):
     start_time = Column(Float, nullable=True)
     end_time = Column(Float, nullable=True)
     chunk_index = Column(Integer, nullable=False)
+    content_type = Column(String, nullable=False)
+    token_count = Column(Integer, nullable=True)
     embedding = Column(Vector(EMBEDDING_DIM), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)

@@ -33,7 +33,7 @@ def backfill():
             )
             segments = [Segment(start=t.start_time, end=t.end_time, text=t.text) for t in ts_rows]
 
-            n = store_chunks(db, item.id, transcript.raw_text, segments)
+            n = store_chunks(db, item.id, transcript.raw_text, segments, content_type=item.source_type)
             print(f"{item.source_type:10s} {item.id}  ->  {n} chunk(s)")
             created += 1
 

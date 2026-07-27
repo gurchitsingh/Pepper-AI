@@ -20,10 +20,11 @@ HANDLERS = {
 }
 
 
-def store_chunks(db, saved_item_id, raw_text: str, segments) -> int:
+def store_chunks(db, saved_item_id, raw_text: str, segments, content_type: str) -> int:
     """Chunks by timed segments when available (YouTube/Whisper), otherwise by
-    paragraph/char count (articles, notes). Persists Chunk rows with chunk_index,
-    embedding each chunk via Voyage AI if VOYAGE_API_KEY is configured.
+    paragraph/char count (articles, notes, documents). Persists Chunk rows with
+    chunk_index/content_type/token_count, embedding each chunk via Voyage AI if
+    VOYAGE_API_KEY is configured.
 
     If embedding fails (most commonly: no key configured yet), chunks are still
     stored with embedding left NULL -- ingestion must not fail just because
@@ -49,6 +50,8 @@ def store_chunks(db, saved_item_id, raw_text: str, segments) -> int:
                 start_time=c.start_time,
                 end_time=c.end_time,
                 chunk_index=index,
+                content_type=content_type,
+                token_count=c.token_count,
                 embedding=vector,
             )
         )
@@ -95,7 +98,7 @@ def process_saved_item(saved_item_id: str) -> None:
         for seg in result.segments:
             db.add(TranscriptSegment(transcript_id=transcript_id, start_time=seg.start, end_time=seg.end, text=seg.text))
 
-        store_chunks(db, item.id, result.raw_text, result.segments)
+        store_chunks(db, item.id, result.raw_text, result.segments, content_type=item.source_type)
 
         if result.title:
             item.title = result.title

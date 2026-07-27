@@ -51,7 +51,7 @@ def create_saved_item(
         db.add(item)
         db.flush()
         db.add(Transcript(saved_item_id=item.id, raw_text=payload.content))
-        store_chunks(db, item.id, payload.content, segments=[])
+        store_chunks(db, item.id, payload.content, segments=[], content_type="note")
         db.commit()
         db.refresh(item)
         return _to_out(item, payload.content)
