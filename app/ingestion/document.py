@@ -1,11 +1,9 @@
-import io
 import os
 import shutil
 
-import fitz
+import pypdfium2 as pdfium
 import pytesseract
 from docx import Document as DocxDocument
-from PIL import Image
 from pypdf import PdfReader
 
 from app.ingestion.common import IngestResult, IngestionError
@@ -94,12 +92,14 @@ def _ocr_pdf(path: str, lang: str = "eng+hin") -> str:
     """
     _ensure_tesseract(lang)
     texts = []
-    with fitz.open(path) as pdf:
+    pdf = pdfium.PdfDocument(path)
+    try:
         for page in pdf:
-            pixmap = page.get_pixmap(dpi=300)
-            image = Image.open(io.BytesIO(pixmap.tobytes("png")))
+            image = page.render(scale=300 / 72).to_pil()
             page_text = pytesseract.image_to_string(image, lang=lang)
             texts.append(transliterate_devanagari(page_text))
+    finally:
+        pdf.close()
     return "\n".join(texts)
 
 
