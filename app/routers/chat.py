@@ -8,8 +8,9 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.embeddings import EmbeddingError, embed_texts
-from app.models.models import Chunk, SavedItem, User
+from app.retrieval import search_chunks
 from app.schemas import ChatRequest, ChatResponse, ChatSource
+from app.models.models import User
 
 load_dotenv()
 
@@ -46,14 +47,7 @@ def chat(
     except EmbeddingError as e:
         raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
 
-    results = (
-        db.query(Chunk, SavedItem)
-        .join(SavedItem, SavedItem.id == Chunk.saved_item_id)
-        .filter(SavedItem.user_id == current_user.id, Chunk.embedding.isnot(None))
-        .order_by(Chunk.embedding.cosine_distance(query_vector))
-        .limit(TOP_K)
-        .all()
-    )
+    results = search_chunks(db, query_vector, user_id=current_user.id, top_k=TOP_K)
 
     if not results:
         return ChatResponse(
