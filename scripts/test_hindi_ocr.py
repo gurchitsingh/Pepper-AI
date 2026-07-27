@@ -17,7 +17,7 @@ os.environ.setdefault(
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import fitz
+import pypdfium2 as pdfium
 import pytesseract
 from PIL import Image, ImageDraw, ImageFont
 from pypdf import PdfReader
@@ -44,14 +44,8 @@ def render_text_image(text: str, font_path: str, size: int = 40) -> Image.Image:
 
 
 def build_image_only_pdf(image: Image.Image, out_path: str) -> None:
-    png_path = out_path + ".png"
-    image.save(png_path)
-    pdf = fitz.open()
-    page = pdf.new_page(width=image.width, height=image.height)
-    page.insert_image(page.rect, filename=png_path)
-    pdf.save(out_path)
-    pdf.close()
-    os.remove(png_path)
+    # Pillow's own PDF writer -- embeds the image with no text layer, no PDF library needed.
+    image.save(out_path, "PDF")
 
 
 def assert_no_text_layer(pdf_path: str) -> None:
@@ -70,14 +64,13 @@ def run_case(label: str, source_text: str, out_path: str) -> None:
     # Reproduce _ocr_pdf's per-page raw OCR step directly (same dpi/lang) so we can show
     # the pre-transliteration Tesseract output before it's overwritten by transliteration.
     document._ensure_tesseract("eng+hin")
-    with fitz.open(out_path) as pdf:
+    pdf = pdfium.PdfDocument(out_path)
+    try:
         raw_ocr = "\n".join(
-            pytesseract.image_to_string(
-                Image.open(__import__("io").BytesIO(page.get_pixmap(dpi=300).tobytes("png"))),
-                lang="eng+hin",
-            )
-            for page in pdf
+            pytesseract.image_to_string(page.render(scale=300 / 72).to_pil(), lang="eng+hin") for page in pdf
         ).strip()
+    finally:
+        pdf.close()
     transliterated = transliterate_devanagari(raw_ocr).strip()
 
     result = document.process_uploaded_document(out_path)
