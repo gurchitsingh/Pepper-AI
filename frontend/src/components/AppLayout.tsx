@@ -1,21 +1,20 @@
-import { Outlet } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
+import { User } from "lucide-react";
 import { BottomNav } from "./BottomNav";
-import { useAuth } from "../auth/AuthContext";
 
 export function AppLayout() {
-  const { logout } = useAuth();
-
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md">
+    <div className="min-h-screen flex flex-col bg-bg">
+      <header className="fixed top-0 w-full z-50 bg-bg/80 backdrop-blur-md">
         <div className="flex justify-between items-center px-6 h-16 w-full max-w-[1200px] mx-auto">
-          <h1 className="font-display text-primary text-2xl font-bold tracking-tight">Weave AI</h1>
-          <button
-            onClick={logout}
-            className="font-body text-sm text-on-surface-variant hover:text-primary transition-colors"
+          <h1 className="font-heading text-accent text-2xl font-bold tracking-tight">Pepper</h1>
+          <Link
+            to="/settings"
+            aria-label="Settings"
+            className="w-9 h-9 rounded-full bg-surface flex items-center justify-center text-text-secondary hover:text-accent transition-colors"
           >
-            Log out
-          </button>
+            <User size={18} />
+          </Link>
         </div>
       </header>
       <main className="flex-grow pt-24 pb-32">

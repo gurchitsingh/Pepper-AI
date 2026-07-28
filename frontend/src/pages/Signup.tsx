@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import { GoogleSignInButton } from "../auth/GoogleSignInButton";
 import { ApiError } from "../api/client";
+import { isOnboarded } from "../onboarding/onboardingStatus";
 
 export function Signup() {
   const { signup } = useAuth();
@@ -18,7 +20,7 @@ export function Signup() {
     setSubmitting(true);
     try {
       await signup(email, password, name);
-      navigate("/");
+      navigate(isOnboarded() ? "/" : "/preferences");
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Signup failed");
     } finally {
@@ -27,16 +29,16 @@ export function Signup() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
+    <div className="min-h-screen flex items-center justify-center px-6 bg-bg">
       <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-8 w-full max-w-sm flex flex-col gap-4">
-        <h1 className="font-display text-primary text-2xl font-bold mb-2">Create your account</h1>
+        <h1 className="font-heading text-accent text-2xl font-bold mb-2">Create your account</h1>
         {error && <p className="text-error text-sm">{error}</p>}
         <input
           type="text"
           placeholder="Name (optional)"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="bg-surface-container-high rounded-lg px-4 py-3 text-on-surface outline-none focus:ring-2 focus:ring-primary"
+          className="bg-surface border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent"
         />
         <input
           type="email"
@@ -44,7 +46,7 @@ export function Signup() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="bg-surface-container-high rounded-lg px-4 py-3 text-on-surface outline-none focus:ring-2 focus:ring-primary"
+          className="bg-surface border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent"
         />
         <input
           type="password"
@@ -53,18 +55,26 @@ export function Signup() {
           placeholder="Password (min 8 characters)"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="bg-surface-container-high rounded-lg px-4 py-3 text-on-surface outline-none focus:ring-2 focus:ring-primary"
+          className="bg-surface border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent"
         />
         <button
           type="submit"
           disabled={submitting}
-          className="bg-primary text-on-primary font-medium h-12 rounded-full mt-2 disabled:opacity-50"
+          className="bg-accent text-accent-contrast font-medium h-12 rounded-full mt-2 disabled:opacity-50"
         >
           {submitting ? "Signing up..." : "Sign up"}
         </button>
-        <p className="text-on-surface-variant text-sm text-center mt-2">
-          Already have an account? <Link to="/login" className="text-primary hover:underline">Log in</Link>
+        <p className="text-text-secondary text-sm text-center mt-2">
+          Already have an account? <Link to="/login" className="text-accent hover:underline">Log in</Link>
         </p>
+
+        <div className="flex items-center gap-3 my-1">
+          <div className="h-px bg-text-secondary/20 flex-grow" />
+          <span className="text-text-secondary text-xs">OR</span>
+          <div className="h-px bg-text-secondary/20 flex-grow" />
+        </div>
+
+        <GoogleSignInButton />
       </form>
     </div>
   );

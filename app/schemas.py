@@ -24,6 +24,15 @@ class OAuthLogin(BaseModel):
     id_token: str
 
 
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    email: str
+    name: str | None
+    plan: str
+
+
 class SavedItemCreate(BaseModel):
     source_type: str
     source_url: str | None = None

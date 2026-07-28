@@ -14,3 +14,24 @@ export interface SavedItem {
   duration_seconds: number | null;
   created_at: string;
 }
+
+export interface UserOut {
+  id: string;
+  email: string;
+  name: string | null;
+  plan: string;
+}
+
+export interface ChatSource {
+  saved_item_id: string;
+  title: string | null;
+  source_type: string;
+  chunk_text: string;
+  start_time: number | null;
+  end_time: number | null;
+}
+
+export interface ChatResponse {
+  answer: string;
+  sources: ChatSource[];
+}

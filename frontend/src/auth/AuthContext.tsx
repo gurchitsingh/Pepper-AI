@@ -6,6 +6,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, name?: string) => Promise<void>;
+  googleLogin: (idToken: string) => Promise<void>;
   logout: () => void;
 }
 
@@ -26,13 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsAuthenticated(true);
   }
 
+  async function googleLogin(idToken: string) {
+    const token = await api.googleLogin(idToken);
+    setToken(token.access_token);
+    setIsAuthenticated(true);
+  }
+
   function logout() {
     clearToken();
     setIsAuthenticated(false);
   }
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, signup, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, login, signup, googleLogin, logout }}>
       {children}
     </AuthContext.Provider>
   );
