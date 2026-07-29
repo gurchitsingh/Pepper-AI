@@ -45,6 +45,7 @@ class SavedItemCreate(BaseModel):
     source_type: str
     source_url: str | None = None
     content: str | None = None  # required when source_type == "note": the note text itself
+    title: str | None = None  # optional, only used when source_type == "note"
 
 
 class SavedItemOut(BaseModel):

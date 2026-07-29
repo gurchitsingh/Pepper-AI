@@ -47,7 +47,8 @@ def create_saved_item(
         if not payload.content or not payload.content.strip():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="content is required for note items")
 
-        item = SavedItem(user_id=current_user.id, source_type="note", status="ready")
+        title = payload.title.strip() if payload.title and payload.title.strip() else None
+        item = SavedItem(user_id=current_user.id, source_type="note", status="ready", title=title)
         db.add(item)
         db.flush()
         db.add(Transcript(saved_item_id=item.id, raw_text=payload.content))
