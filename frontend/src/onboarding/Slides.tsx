@@ -1,26 +1,39 @@
 import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import {
+  MeetPepperIllustration,
+  SaveAnythingIllustration,
+  TranscribedIllustration,
+  ChatWithKnowledgeIllustration,
+} from "./illustrations";
 
 const SLIDES = [
-  { title: "Meet Pepper", desc: "Your personal knowledge companion." },
+  {
+    title: "Welcome to Pepper AI",
+    desc: "Your personal knowledge companion.",
+    Illustration: MeetPepperIllustration,
+  },
   {
     title: "Save Anything",
     desc: "Reels, videos, podcasts, articles, or a quick note — Pepper keeps it all in one place.",
+    Illustration: SaveAnythingIllustration,
   },
   {
     title: "Transcribed Automatically",
     desc: "Audio and video get transcribed the moment you save them. No manual work.",
+    Illustration: TranscribedIllustration,
   },
   {
     title: "Chat With Your Knowledge",
     desc: "Ask Pepper anything — it answers using everything you've saved.",
+    Illustration: ChatWithKnowledgeIllustration,
   },
 ];
 
-const AUTO_ADVANCE_MS = 4000;
+const AUTO_ADVANCE_MS = 3000;
 const SWIPE_THRESHOLD_PX = 50;
-const TRANSITION = { duration: 0.2, ease: "easeOut" as const };
+const TRANSITION = { duration: 0.13, ease: "easeOut" as const };
 
 const slideVariants = {
   enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 24 : -24 }),
@@ -37,7 +50,20 @@ export function Slides() {
 
   useEffect(() => {
     if (isLast) return;
-    const timer = setTimeout(() => goTo(index + 1), AUTO_ADVANCE_MS);
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        // Tab may have been backgrounded, throttling rAF-driven exit
+        // animations; skip advancing until it's visible again so slides
+        // don't pile up unanimated.
+        if (document.hidden) {
+          schedule();
+          return;
+        }
+        goTo(index + 1);
+      }, AUTO_ADVANCE_MS);
+    };
+    schedule();
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index, isLast]);
@@ -83,10 +109,17 @@ export function Slides() {
             transition={TRANSITION}
             className="flex flex-col items-center gap-4"
           >
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={TRANSITION}
+            >
+              <slide.Illustration />
+            </motion.div>
             <motion.h1
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ ...TRANSITION, delay: 0.05 }}
+              transition={{ ...TRANSITION, delay: 0.03 }}
               className="font-heading text-text-primary text-3xl font-bold"
             >
               {slide.title}
@@ -94,7 +127,7 @@ export function Slides() {
             <motion.p
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ ...TRANSITION, delay: 0.1 }}
+              transition={{ ...TRANSITION, delay: 0.06 }}
               className="text-text-secondary max-w-sm"
             >
               {slide.desc}
@@ -120,7 +153,7 @@ export function Slides() {
       <div className="px-8 pb-12">
         <button
           onClick={() => navigate("/signup")}
-          className="bg-accent text-accent-contrast font-medium h-12 w-full max-w-sm rounded-full"
+          className="bg-accent text-accent-contrast font-medium h-12 w-full max-w-sm rounded-full mx-auto block"
         >
           Get Started
         </button>
