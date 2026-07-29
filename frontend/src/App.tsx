@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./theme/ThemeContext";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { ChatProvider } from "./chat/ChatContext";
 import { isOnboarded } from "./onboarding/onboardingStatus";
 import { Slides } from "./onboarding/Slides";
 import { Preferences } from "./onboarding/Preferences";
@@ -35,44 +36,46 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/slides" element={<Slides />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route
-              path="/preferences"
-              element={
-                <RequireAuth>
-                  <Preferences />
-                </RequireAuth>
-              }
-            />
-            <Route
-              path="/source"
-              element={
-                <RequireAuth>
-                  <ReferralSource />
-                </RequireAuth>
-              }
-            />
-            <Route
-              element={
-                <RequireOnboarded>
-                  <AppLayout />
-                </RequireOnboarded>
-              }
-            >
-              <Route path="/" element={<Home />} />
-              <Route path="/save" element={<Save />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/insights" element={<Stub title="Insights" />} />
-              <Route path="/chat" element={<Chatbot />} />
-              <Route path="/settings" element={<Settings />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </BrowserRouter>
+        <ChatProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/slides" element={<Slides />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route
+                path="/preferences"
+                element={
+                  <RequireAuth>
+                    <Preferences />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                path="/source"
+                element={
+                  <RequireAuth>
+                    <ReferralSource />
+                  </RequireAuth>
+                }
+              />
+              <Route
+                element={
+                  <RequireOnboarded>
+                    <AppLayout />
+                  </RequireOnboarded>
+                }
+              >
+                <Route path="/" element={<Home />} />
+                <Route path="/save" element={<Save />} />
+                <Route path="/library" element={<Library />} />
+                <Route path="/insights" element={<Stub title="Insights" />} />
+                <Route path="/chat" element={<Chatbot />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </ChatProvider>
       </AuthProvider>
     </ThemeProvider>
   );
