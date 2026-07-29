@@ -11,12 +11,24 @@ export function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const passwordStrong = /[A-Z]/.test(password) && /[0-9]/.test(password);
+  const passwordsMatch = password === confirmPassword;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!passwordStrong) {
+      setError("Password must contain at least one uppercase letter and one number");
+      return;
+    }
+    if (!passwordsMatch) {
+      setError("Passwords do not match");
+      return;
+    }
     setSubmitting(true);
     try {
       await signup(email, password, name);
@@ -57,6 +69,20 @@ export function Signup() {
           onChange={(e) => setPassword(e.target.value)}
           className="bg-surface border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent"
         />
+        {password.length > 0 && !passwordStrong && (
+          <p className="text-error text-xs -mt-2">Must include an uppercase letter and a number</p>
+        )}
+        <input
+          type="password"
+          required
+          placeholder="Confirm password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="bg-surface border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent"
+        />
+        {confirmPassword.length > 0 && !passwordsMatch && (
+          <p className="text-error text-xs -mt-2">Passwords do not match</p>
+        )}
         <button
           type="submit"
           disabled={submitting}
