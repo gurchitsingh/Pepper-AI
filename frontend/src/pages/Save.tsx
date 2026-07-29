@@ -1,6 +1,6 @@
 import { useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, Mic, FileText, Link2, Square, X } from "lucide-react";
+import { Camera, ImagePlus, Mic, FileText, Link2, Square, X } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 
@@ -42,7 +42,8 @@ function Modal({ title, onClose, children }: ModalProps) {
 }
 
 const ENTRY_POINTS = [
-  { id: "camera", label: "Capture", desc: "Snap a photo or document", Icon: Camera },
+  { id: "click-picture", label: "Click a Picture", desc: "Capture with your camera", Icon: Camera },
+  { id: "add-picture", label: "Add a Picture", desc: "Choose an existing photo", Icon: ImagePlus },
   { id: "voice", label: "Voice Note", desc: "Record and auto-transcribe", Icon: Mic },
   { id: "note", label: "Quick Note", desc: "Type a fleeting thought", Icon: FileText },
   { id: "link", label: "Paste Link", desc: "Save an article or video", Icon: Link2 },
@@ -55,10 +56,12 @@ export function Save() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
+  const [noteTitle, setNoteTitle] = useState("");
   const [noteContent, setNoteContent] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -68,7 +71,7 @@ export function Save() {
     setTimeout(() => setFeedback(null), 4000);
   }
 
-  async function handleCameraChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePictureChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
@@ -120,7 +123,8 @@ export function Save() {
     if (!noteContent.trim()) return;
     setSubmitting(true);
     try {
-      await api.createNote(noteContent);
+      await api.createNote(noteContent, noteTitle.trim());
+      setNoteTitle("");
       setNoteContent("");
       setOpenModal(null);
       showFeedback({ type: "success", message: "Note saved." });
@@ -148,8 +152,12 @@ export function Save() {
   }
 
   function handleTileTap(id: EntryId) {
-    if (id === "camera") {
-      fileInputRef.current?.click();
+    if (id === "click-picture") {
+      cameraInputRef.current?.click();
+      return;
+    }
+    if (id === "add-picture") {
+      galleryInputRef.current?.click();
       return;
     }
     if (id === "voice") {
@@ -164,12 +172,19 @@ export function Save() {
       <h2 className="font-heading text-text-primary text-2xl font-bold mb-2">Save something</h2>
 
       <input
-        ref={fileInputRef}
+        ref={cameraInputRef}
         type="file"
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={handleCameraChange}
+        onChange={handlePictureChange}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handlePictureChange}
       />
 
       <AnimatePresence>
@@ -218,6 +233,13 @@ export function Save() {
         {openModal === "note" && (
           <Modal title="Quick Note" onClose={() => setOpenModal(null)}>
             <form onSubmit={handleNoteSubmit} className="flex flex-col gap-4">
+              <input
+                type="text"
+                value={noteTitle}
+                onChange={(e) => setNoteTitle(e.target.value)}
+                placeholder="Title (optional)"
+                className="bg-surface border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent"
+              />
               <textarea
                 autoFocus
                 value={noteContent}

@@ -26,11 +26,15 @@ export function getMe() {
   return apiFetch<UserOut>("/auth/me");
 }
 
-export function createNote(content: string) {
+export function createNote(content: string, title?: string) {
   return apiFetch<SavedItem>("/saved-items", {
     method: "POST",
-    body: JSON.stringify({ source_type: "note", content }),
+    body: JSON.stringify({ source_type: "note", content, title: title || null }),
   });
+}
+
+export function getSavedItem(id: string) {
+  return apiFetch<SavedItem>(`/saved-items/${id}`);
 }
 
 export function createLinkItem(sourceUrl: string) {
