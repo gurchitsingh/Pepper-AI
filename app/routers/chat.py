@@ -16,7 +16,7 @@ load_dotenv()
 router = APIRouter(tags=["chat"])
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-flash-latest"
 TOP_K = 5
 
 SYSTEM_PROMPT = (
