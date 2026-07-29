@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+/* Theme 1 (default): Orange + Black */
+:root {
+  --bg: #121212;
+  --surface: #201c1a;
+  --text-primary: #f2eee9;
+  --text-secondary: #a39c93;
+  --accent: #f08a3c;
+  --accent-contrast: #171310;
+}
+
+/* Theme 2: Muted indigo */
+[data-theme="indigo"] {
+  --bg: #14161f;
+  --surface: #1e212c;
+  --text-primary: #e7e9f0;
+  --text-secondary: #8c90a3;
+  --accent: #5b63a8;
+  --accent-contrast: #ffffff;
+}
+
+/* Theme 3: Charcoal + electric blue */
+[data-theme="charcoal"] {
+  --bg: #16181c;
+  --surface: #202329;
+  --text-primary: #edeef0;
+  --text-secondary: #8c9099;
+  --accent: #4f8ff0;
+  --accent-contrast: #ffffff;
+}
+
+/* Theme 4: Deep plum + rose-pink */
+[data-theme="plum"] {
+  --bg: #201621;
+  --surface: #2b1e2c;
+  --text-primary: #f2e9ec;
+  --text-secondary: #a08c9e;
+  --accent: #d9899e;
+  --accent-contrast: #2b1e2c;
+}
+
+/* Theme 5: Warm cream + forest green (light) */
+[data-theme="cream"] {
+  --bg: #f7f3e9;
+  --surface: #ffffff;
+  --text-primary: #1e2a1e;
+  --text-secondary: #6e7a6a;
+  --accent: #2f5233;
+  --accent-contrast: #ffffff;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  /* Semantic status colors: fixed across themes so state stays recognizable */
+  --color-error: #e5484d;
+  --color-success: #2f9e5b;
+
+  --font-heading: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+}
+
+body {
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 400ms ease, color 400ms ease;
+}
+
+.glass-card {
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background-color 400ms ease, border-color 400ms ease;
+}

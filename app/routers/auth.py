@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.auth import (
     create_access_token,
     find_or_create_oauth_user,
+    get_current_user,
     hash_password,
     verify_apple_token,
     verify_google_token,
@@ -12,9 +13,14 @@ from app.auth import (
 from app.database import get_db
 from app.models.models import User
 from app.rate_limit import limiter
-from app.schemas import OAuthLogin, Token, UserLogin, UserSignup
+from app.schemas import OAuthLogin, Token, UserLogin, UserOut, UserSignup
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+@router.get("/me", response_model=UserOut)
+def me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)

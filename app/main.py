@@ -11,10 +11,9 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# ponytail: hardcoded dev origin, swap for an env-driven allowlist before deploying past localhost
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
