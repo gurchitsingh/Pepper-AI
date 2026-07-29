@@ -1,16 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, FileText, Link2, Mic, FileImage } from "lucide-react";
+import { Send, FileText, Link2, Mic, FileImage, RotateCcw } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { ChatSource } from "../api/types";
-
-interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  sources?: ChatSource[];
-}
+import { useChat, type Message } from "../chat/ChatContext";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -56,7 +50,7 @@ function SourceCard({ source }: { source: ChatSource }) {
 }
 
 export function Chatbot() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, setMessages, newSession } = useChat();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -86,7 +80,18 @@ export function Chatbot() {
 
   return (
     <div className="max-w-[700px] mx-auto px-6 flex flex-col gap-4 h-[calc(100vh-14rem)]">
-      <h2 className="font-heading text-text-primary text-2xl font-bold">Chat with Pepper</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="font-heading text-text-primary text-2xl font-bold">Chat with Pepper</h2>
+        <button
+          type="button"
+          onClick={newSession}
+          disabled={messages.length === 0 && !loading}
+          className="flex items-center gap-1.5 text-text-secondary text-sm px-3 py-1.5 rounded-full hover:bg-surface disabled:opacity-40 transition-colors"
+        >
+          <RotateCcw size={14} />
+          New Session
+        </button>
+      </div>
 
       <div className="flex-grow overflow-y-auto flex flex-col gap-4 pb-2">
         {messages.length === 0 && (
