@@ -77,3 +77,4 @@ export const THEMES: Theme[] = [
 ];
 
 export const DEFAULT_THEME_ID = "default";
+export const DEFAULT_LIGHT_THEME_ID = "cream";
