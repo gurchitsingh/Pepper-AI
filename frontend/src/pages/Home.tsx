@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, FileText, Link2, Mic, FileImage } from "lucide-react";
+import { Plus, FileText, Link2, Mic, FileImage, Flame } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { SavedItem } from "../api/types";
+import { computeStreak } from "./streak";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -49,9 +50,18 @@ export function Home() {
   const ready = items?.filter((i) => i.status === "ready").length ?? 0;
   const processing = items?.filter((i) => i.status === "pending" || i.status === "processing").length ?? 0;
   const recent = items?.slice(0, 6) ?? [];
+  const streak = computeStreak(items ?? []);
 
   return (
     <div className="max-w-[600px] mx-auto px-6 flex flex-col gap-8">
+      {streak > 0 && (
+        <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-2 w-fit">
+          <Flame size={20} className="text-accent" />
+          <span className="font-heading text-text-primary font-bold">{streak}</span>
+          <span className="text-text-secondary text-sm">day streak</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: "Saved", value: total },
