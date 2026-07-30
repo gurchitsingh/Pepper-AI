@@ -10,23 +10,23 @@ import {
 
 const SLIDES = [
   {
-    title: "Welcome to Pepper AI",
-    desc: "Your personal knowledge companion.",
+    title: "Meet Pepper",
+    desc: "A quiet place for everything worth remembering.",
     Illustration: MeetPepperIllustration,
   },
   {
-    title: "Save Anything",
-    desc: "Reels, videos, podcasts, articles, or a quick note — Pepper keeps it all in one place.",
+    title: "Save Anything, As It Happens",
+    desc: "A reel, a podcast, an article, a thought at midnight — send it to Pepper and it's kept, in one place.",
     Illustration: SaveAnythingIllustration,
   },
   {
-    title: "Transcribed Automatically",
-    desc: "Audio and video get transcribed the moment you save them. No manual work.",
+    title: "Transcribed the Moment You Save It",
+    desc: "Audio and video turn into searchable text automatically. No re-listening, no typing it out.",
     Illustration: TranscribedIllustration,
   },
   {
-    title: "Chat With Your Knowledge",
-    desc: "Ask Pepper anything — it answers using everything you've saved.",
+    title: "Ask, and Pepper Remembers",
+    desc: "Everything you've saved becomes something you can talk to.",
     Illustration: ChatWithKnowledgeIllustration,
   },
 ];

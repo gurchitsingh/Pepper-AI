@@ -81,7 +81,7 @@ export function Home() {
         {error && <p className="text-error text-sm">{error}</p>}
         {items === null && !error && <p className="text-text-secondary text-sm">Loading...</p>}
         {items?.length === 0 && (
-          <p className="text-text-secondary text-sm">Nothing saved yet — tap "Save something" to get started.</p>
+          <p className="text-text-secondary text-sm">Nothing here yet — save something and it'll show up below.</p>
         )}
 
         <motion.div variants={listVariants} initial="hidden" animate="show" className="flex flex-col gap-3">
