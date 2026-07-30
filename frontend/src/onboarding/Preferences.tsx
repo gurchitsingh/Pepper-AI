@@ -87,7 +87,7 @@ export function Preferences() {
 
       <button
         onClick={handleContinue}
-        className="bg-accent text-accent-contrast font-medium h-12 rounded-full mt-auto"
+        className="btn-accent font-medium h-12 rounded-full mt-auto"
       >
         Continue
       </button>

@@ -78,7 +78,7 @@ export function Home() {
       <Link to="/save">
         <motion.div
           whileTap={{ scale: 0.97 }}
-          className="bg-accent text-accent-contrast font-medium h-14 rounded-full flex items-center justify-center gap-2"
+          className="btn-accent font-medium h-14 rounded-full flex items-center justify-center gap-2"
         >
           <Plus size={20} />
           Save something

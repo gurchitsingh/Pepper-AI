@@ -150,7 +150,7 @@ export function Chatbot() {
           whileTap={{ scale: 0.9 }}
           type="submit"
           disabled={loading || !question.trim()}
-          className="w-12 h-12 rounded-full bg-accent text-accent-contrast flex items-center justify-center shrink-0 disabled:opacity-50"
+          className="w-12 h-12 rounded-full btn-accent flex items-center justify-center shrink-0 disabled:opacity-50"
         >
           <Send size={18} />
         </motion.button>

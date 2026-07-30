@@ -41,7 +41,7 @@ export function ReferralSource() {
       <button
         onClick={handleFinish}
         disabled={!selected}
-        className="bg-accent text-accent-contrast font-medium h-12 rounded-full mt-auto disabled:opacity-50"
+        className="btn-accent font-medium h-12 rounded-full mt-auto disabled:opacity-50"
       >
         Finish
       </button>

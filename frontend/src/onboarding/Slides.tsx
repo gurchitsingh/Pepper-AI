@@ -153,7 +153,7 @@ export function Slides() {
       <div className="px-8 pb-12">
         <button
           onClick={() => navigate("/signup")}
-          className="bg-accent text-accent-contrast font-medium h-12 w-full max-w-sm rounded-full mx-auto block"
+          className="btn-accent font-medium h-12 w-full max-w-sm rounded-full mx-auto block"
         >
           Get Started
         </button>
