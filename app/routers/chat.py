@@ -1,9 +1,10 @@
 import os
 
-import google.generativeai as genai
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status
-from google.api_core.exceptions import GoogleAPIError
+from google import genai
+from google.genai import types
+from google.genai.errors import APIError
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -77,11 +78,14 @@ def chat(
     context = "\n\n---\n\n".join(context_blocks)
     user_message = f"Context from the user's saved content:\n\n{context}\n\nQuestion: {payload.question}"
 
-    genai.configure(api_key=GOOGLE_API_KEY)
-    model = genai.GenerativeModel(GEMINI_MODEL, system_instruction=SYSTEM_PROMPT)
+    client = genai.Client(api_key=GOOGLE_API_KEY)
     try:
-        response = model.generate_content(user_message)
-    except GoogleAPIError as e:
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=user_message,
+            config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
+        )
+    except APIError as e:
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"Gemini request failed: {e}")
     answer = response.text
 
