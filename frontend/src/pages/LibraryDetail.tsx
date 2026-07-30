@@ -67,10 +67,12 @@ export function LibraryDetail() {
           {item.failure_reason && <p className="text-error text-sm">{item.failure_reason}</p>}
 
           {item.status !== "failed" && (
-            item.transcript ? (
+            item.status !== "ready" ? (
+              <p className="text-text-secondary text-sm">Still processing ({item.status})...</p>
+            ) : item.transcript ? (
               <p className="font-body text-text-primary whitespace-pre-wrap leading-relaxed">{item.transcript}</p>
             ) : (
-              <p className="text-text-secondary text-sm">Still processing ({item.status})...</p>
+              <p className="text-text-secondary text-sm italic">No text extracted from this item.</p>
             )
           )}
         </div>
