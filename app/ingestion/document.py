@@ -1,15 +1,20 @@
 import os
 import shutil
 
+import pillow_heif
 import pypdfium2 as pdfium
 import pytesseract
 from docx import Document as DocxDocument
+from PIL import Image
 from pypdf import PdfReader
 
 from app.ingestion.common import IngestResult, IngestionError
 from app.ingestion.transliteration import transliterate_devanagari
 
-SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf", ".docx"}
+pillow_heif.register_heif_opener()
+
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".heic"}
+SUPPORTED_EXTENSIONS = {".md", ".txt", ".pdf", ".docx"} | IMAGE_EXTENSIONS
 
 TESSERACT_FALLBACK_PATHS = (
     r"C:\Program Files\Tesseract-OCR\tesseract.exe",
@@ -109,6 +114,21 @@ def _extract_docx(path: str) -> str:
     return "\n".join(paragraphs)
 
 
+def _ocr_image(path: str, lang: str = "eng+hin") -> str:
+    """OCR a standalone photo (as opposed to a scanned PDF page) using the same
+    Tesseract setup as _ocr_pdf. A photo with no text (e.g. a landscape) is expected
+    to produce empty output here -- that's not an error, see process_uploaded_document.
+    """
+    _ensure_tesseract(lang)
+    image = Image.open(path)
+    image.load()
+    # pytesseract only recognizes a handful of image.format values (PNG/JPEG/etc) and
+    # rejects anything else outright -- clearing it makes it fall back to PNG, which
+    # works for any decoded image regardless of source format (e.g. HEIC).
+    image.format = None
+    return transliterate_devanagari(pytesseract.image_to_string(image, lang=lang))
+
+
 def process_uploaded_document(file_path: str) -> IngestResult:
     if not os.path.exists(file_path):
         raise IngestionError(f"Uploaded file not found on disk: {file_path}")
@@ -125,6 +145,8 @@ def process_uploaded_document(file_path: str) -> IngestResult:
             text = _ocr_pdf(file_path)
     elif ext == ".docx":
         text = _extract_docx(file_path)
+    elif ext in IMAGE_EXTENSIONS:
+        text = _ocr_image(file_path)
     else:
         raise IngestionError(
             f"Unsupported document file type: {ext or '(no extension)'}. Supported: {sorted(SUPPORTED_EXTENSIONS)}"
@@ -132,6 +154,10 @@ def process_uploaded_document(file_path: str) -> IngestResult:
 
     text = text.strip()
     if not text:
+        if ext in IMAGE_EXTENSIONS:
+            # A photo with no readable text (e.g. a landscape) is still a valid save --
+            # store it with empty text rather than failing, so it stays visible in Library.
+            return IngestResult(raw_text="")
         if ext == ".pdf":
             detail = (
                 "No extractable text found in this PDF, even after OCR."
