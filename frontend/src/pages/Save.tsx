@@ -42,11 +42,11 @@ function Modal({ title, onClose, children }: ModalProps) {
 }
 
 const ENTRY_POINTS = [
-  { id: "click-picture", label: "Click a Picture", desc: "Capture with your camera", Icon: Camera },
-  { id: "add-picture", label: "Add a Picture", desc: "Choose an existing photo", Icon: ImagePlus },
-  { id: "voice", label: "Voice Note", desc: "Record and auto-transcribe", Icon: Mic },
-  { id: "note", label: "Quick Note", desc: "Type a fleeting thought", Icon: FileText },
-  { id: "link", label: "Paste Link", desc: "Save an article or video", Icon: Link2 },
+  { id: "click-picture", label: "Take a Photo", desc: "Snap it with your camera", Icon: Camera },
+  { id: "add-picture", label: "Upload a Photo", desc: "Pick one from your library", Icon: ImagePlus },
+  { id: "voice", label: "Voice Note", desc: "Speak it — Pepper transcribes as you go", Icon: Mic },
+  { id: "note", label: "Quick Note", desc: "Jot it down before it slips away", Icon: FileText },
+  { id: "link", label: "Paste Link", desc: "Drop in an article, video, or post", Icon: Link2 },
 ] as const;
 
 type EntryId = (typeof ENTRY_POINTS)[number]["id"];
@@ -78,9 +78,9 @@ export function Save() {
     setUploading(true);
     try {
       const item = await api.uploadSavedItem("document", file, file.name);
-      showFeedback({ type: "success", message: `Captured — processing (${item.status}).` });
+      showFeedback({ type: "success", message: `Saved — Pepper's processing it now (${item.status}).` });
     } catch (err) {
-      showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Capture failed" });
+      showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Couldn't save that — try again" });
     } finally {
       setUploading(false);
     }
@@ -103,9 +103,9 @@ export function Save() {
         setUploading(true);
         try {
           const item = await api.uploadSavedItem("voice_note", blob, "voice-note.webm");
-          showFeedback({ type: "success", message: `Voice note saved — processing (${item.status}).` });
+          showFeedback({ type: "success", message: `Voice note saved — Pepper's transcribing it now (${item.status}).` });
         } catch (err) {
-          showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Upload failed" });
+          showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Couldn't save that voice note — try again" });
         } finally {
           setUploading(false);
         }
@@ -114,7 +114,7 @@ export function Save() {
       recorder.start();
       setRecording(true);
     } catch {
-      showFeedback({ type: "error", message: "Microphone access denied" });
+      showFeedback({ type: "error", message: "Pepper needs microphone access to record" });
     }
   }
 
@@ -127,9 +127,9 @@ export function Save() {
       setNoteTitle("");
       setNoteContent("");
       setOpenModal(null);
-      showFeedback({ type: "success", message: "Note saved." });
+      showFeedback({ type: "success", message: "Saved to your library." });
     } catch (err) {
-      showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Failed to save note" });
+      showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Couldn't save that note — try again" });
     } finally {
       setSubmitting(false);
     }
@@ -143,9 +143,9 @@ export function Save() {
       const item = await api.createLinkItem(linkUrl.trim());
       setLinkUrl("");
       setOpenModal(null);
-      showFeedback({ type: "success", message: `Link saved as ${item.source_type} — processing.` });
+      showFeedback({ type: "success", message: `Saved — Pepper's on it (${item.source_type}).` });
     } catch (err) {
-      showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Failed to save link" });
+      showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Couldn't save that link — try again" });
     } finally {
       setSubmitting(false);
     }
@@ -244,7 +244,7 @@ export function Save() {
                 autoFocus
                 value={noteContent}
                 onChange={(e) => setNoteContent(e.target.value)}
-                placeholder="Capture a fleeting insight..."
+                placeholder="Write it down before it's gone..."
                 rows={5}
                 className="bg-surface border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent resize-none"
               />

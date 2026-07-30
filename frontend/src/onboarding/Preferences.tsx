@@ -36,7 +36,7 @@ export function Preferences() {
     <div className="min-h-screen flex flex-col px-6 py-12 max-w-lg mx-auto gap-10">
       <div>
         <h1 className="font-heading text-text-primary text-2xl font-bold mb-1">Make it yours</h1>
-        <p className="text-text-secondary text-sm">Pick a look and tell us what you're into.</p>
+        <p className="text-text-secondary text-sm">Choose a theme, then tell us what you care about.</p>
       </div>
 
       <section className="flex flex-col gap-3">

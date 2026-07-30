@@ -71,7 +71,7 @@ export function Chatbot() {
         { id: crypto.randomUUID(), role: "assistant", content: res.answer, sources: res.sources },
       ]);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : "Something went wrong asking Pepper.";
+      const message = err instanceof ApiError ? err.message : "Pepper couldn't answer that — try again.";
       setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: message }]);
     } finally {
       setLoading(false);
@@ -96,7 +96,7 @@ export function Chatbot() {
       <div className="flex-grow overflow-y-auto flex flex-col gap-4 pb-2">
         {messages.length === 0 && (
           <p className="text-text-secondary text-sm">
-            Ask a question — Pepper answers using everything you've saved.
+            Ask Pepper anything about what you've saved — it'll answer, and show its sources.
           </p>
         )}
 

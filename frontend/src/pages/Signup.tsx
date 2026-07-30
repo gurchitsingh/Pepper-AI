@@ -43,7 +43,7 @@ export function Signup() {
   return (
     <div className="min-h-screen flex items-center justify-center px-6 bg-bg">
       <form onSubmit={handleSubmit} className="glass-card rounded-2xl p-8 w-full max-w-sm flex flex-col gap-4">
-        <h1 className="font-heading text-accent text-2xl font-bold mb-2">Create your account</h1>
+        <h1 className="font-heading text-accent text-2xl font-bold mb-2">Join Pepper</h1>
         {error && <p className="text-error text-sm">{error}</p>}
         <input
           type="text"

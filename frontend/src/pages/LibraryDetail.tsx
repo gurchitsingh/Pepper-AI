@@ -70,7 +70,7 @@ export function LibraryDetail() {
             item.transcript ? (
               <p className="font-body text-text-primary whitespace-pre-wrap leading-relaxed">{item.transcript}</p>
             ) : (
-              <p className="text-text-secondary text-sm">Still processing ({item.status})...</p>
+              <p className="text-text-secondary text-sm">Pepper's still processing this ({item.status})...</p>
             )
           )}
         </div>

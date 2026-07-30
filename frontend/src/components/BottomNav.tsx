@@ -5,7 +5,7 @@ import { Home, PlusCircle, MessageCircle, LayoutGrid, Sparkles } from "lucide-re
 const NAV_ITEMS = [
   { to: "/", label: "Home", Icon: Home },
   { to: "/save", label: "Save", Icon: PlusCircle },
-  { to: "/chat", label: "Chatbot", Icon: MessageCircle },
+  { to: "/chat", label: "Chat", Icon: MessageCircle },
   { to: "/library", label: "Library", Icon: LayoutGrid },
   { to: "/insights", label: "Insights", Icon: Sparkles },
 ];

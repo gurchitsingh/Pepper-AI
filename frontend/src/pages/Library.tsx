@@ -82,7 +82,7 @@ export function Library() {
       {error && <p className="text-error text-sm">{error}</p>}
       {items === null && !error && <p className="text-text-secondary text-sm">Loading...</p>}
       {items?.length !== undefined && filtered.length === 0 && (
-        <p className="text-text-secondary text-sm">No items in this category yet.</p>
+        <p className="text-text-secondary text-sm">Nothing filed under this yet.</p>
       )}
 
       <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
