@@ -28,7 +28,7 @@ filelock==3.32.0
 flatbuffers==25.12.19
 fsspec==2026.6.0
 google-auth==2.56.2
-google-generativeai==0.8.6
+google-genai==2.15.0
 greenlet==3.5.4
 h11==0.16.0
 hf-xet==1.5.2
