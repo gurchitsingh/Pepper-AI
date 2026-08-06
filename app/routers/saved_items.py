@@ -1,8 +1,10 @@
+import mimetypes
 import os
 import shutil
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -19,7 +21,26 @@ router = APIRouter(prefix="/saved-items", tags=["saved-items"])
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
 UPLOAD_SOURCE_TYPES = {"instagram", "tiktok", "voice_note", "document"}
 
+AUDIO_MIME_TYPES = {
+    ".webm": "audio/webm",
+    ".mp3": "audio/mpeg",
+    ".wav": "audio/wav",
+    ".m4a": "audio/mp4",
+    ".ogg": "audio/ogg",
+}
+
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+
+def _fetch_owned_item(db: Session, item_id: uuid.UUID, current_user: User) -> SavedItem:
+    item = (
+        db.query(SavedItem)
+        .filter(SavedItem.id == item_id, SavedItem.user_id == current_user.id)
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved item not found")
+    return item
 
 
 def _to_out(item: SavedItem, transcript_text: str | None) -> SavedItemOut:
@@ -164,14 +185,7 @@ def get_saved_item(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    item = (
-        db.query(SavedItem)
-        .filter(SavedItem.id == item_id, SavedItem.user_id == current_user.id)
-        .first()
-    )
-    if item is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved item not found")
-
+    item = _fetch_owned_item(db, item_id, current_user)
     transcript = db.query(Transcript).filter(Transcript.saved_item_id == item.id).first()
     return _to_out(item, transcript.raw_text if transcript else None)
 
@@ -182,14 +196,7 @@ def get_saved_item_segments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    item = (
-        db.query(SavedItem)
-        .filter(SavedItem.id == item_id, SavedItem.user_id == current_user.id)
-        .first()
-    )
-    if item is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved item not found")
-
+    item = _fetch_owned_item(db, item_id, current_user)
     transcript = db.query(Transcript).filter(Transcript.saved_item_id == item.id).first()
     if transcript is None:
         return []
@@ -200,3 +207,22 @@ def get_saved_item_segments(
         .order_by(TranscriptSegment.start_time)
         .all()
     )
+
+
+@router.get("/{item_id}/audio")
+def get_saved_item_audio(
+    item_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = _fetch_owned_item(db, item_id, current_user)
+
+    if item.source_type != "voice_note" or not item.uploaded_file_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No audio available for this item")
+
+    if not os.path.exists(item.uploaded_file_path):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audio file not found on disk")
+
+    ext = os.path.splitext(item.uploaded_file_path)[1].lower()
+    media_type = AUDIO_MIME_TYPES.get(ext) or mimetypes.guess_type(item.uploaded_file_path)[0] or "application/octet-stream"
+    return FileResponse(item.uploaded_file_path, media_type=media_type)

@@ -19,6 +19,8 @@ export function LibraryDetail() {
   const { id } = useParams<{ id: string }>();
   const [item, setItem] = useState<SavedItem | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioError, setAudioError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -27,6 +29,21 @@ export function LibraryDetail() {
       .then(setItem)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load item"));
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !item || item.source_type !== "voice_note") return;
+    let objectUrl: string | null = null;
+    api
+      .getSavedItemAudio(id)
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        setAudioUrl(objectUrl);
+      })
+      .catch((err) => setAudioError(err instanceof ApiError ? err.message : "Failed to load audio"));
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [id, item]);
 
   const Icon = item ? TYPE_ICON[item.source_type] ?? FileText : FileText;
 
@@ -65,6 +82,18 @@ export function LibraryDetail() {
           )}
 
           {item.failure_reason && <p className="text-error text-sm">{item.failure_reason}</p>}
+
+          {item.source_type === "voice_note" && (
+            audioUrl ? (
+              <audio controls src={audioUrl} className="w-full">
+                Your browser does not support the audio element.
+              </audio>
+            ) : audioError ? (
+              <p className="text-error text-sm">{audioError}</p>
+            ) : (
+              <p className="text-text-secondary text-sm">Loading audio...</p>
+            )
+          )}
 
           {item.status !== "failed" && (
             item.status !== "ready" ? (
