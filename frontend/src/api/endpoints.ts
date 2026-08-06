@@ -1,4 +1,4 @@
-import { apiFetch } from "./client";
+import { apiFetch, apiFetchBlob } from "./client";
 import type { ChatResponse, SavedItem, Token, UserOut } from "./types";
 
 export function signup(email: string, password: string, name?: string) {
@@ -35,6 +35,10 @@ export function createNote(content: string, title?: string) {
 
 export function getSavedItem(id: string) {
   return apiFetch<SavedItem>(`/saved-items/${id}`);
+}
+
+export function getSavedItemAudio(id: string) {
+  return apiFetchBlob(`/saved-items/${id}/audio`);
 }
 
 export function createLinkItem(sourceUrl: string) {
