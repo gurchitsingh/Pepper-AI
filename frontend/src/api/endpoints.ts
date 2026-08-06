@@ -1,5 +1,5 @@
 import { apiFetch, apiFetchBlob } from "./client";
-import type { ChatResponse, SavedItem, Token, UserOut } from "./types";
+import type { ChatResponse, Folder, SavedItem, Token, UserOut } from "./types";
 
 export function signup(email: string, password: string, name?: string) {
   return apiFetch<Token>("/auth/signup", {
@@ -72,6 +72,14 @@ export function searchSavedItems(query: string) {
 
 export function deleteSavedItem(id: string) {
   return apiFetch<void>(`/saved-items/${id}`, { method: "DELETE" });
+}
+
+export function listFolders() {
+  return apiFetch<Folder[]>("/folders");
+}
+
+export function recomputeFolders() {
+  return apiFetch<Folder[]>("/folders/recompute", { method: "POST" });
 }
 
 export function chat(question: string) {

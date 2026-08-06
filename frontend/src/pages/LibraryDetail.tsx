@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, FileText, Link2, Mic, FileImage, Trash2 } from "lucide-react";
+import { ArrowLeft, FileText, Link2, Mic, FileImage, Trash2, Folder as FolderIcon } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { SavedItem } from "../api/types";
@@ -99,6 +99,12 @@ export function LibraryDetail() {
             <span className="text-[10px] text-text-secondary font-medium uppercase tracking-widest">
               {item.source_type}
             </span>
+            {item.folder_name && (
+              <span className="flex items-center gap-1 text-xs text-accent bg-bg rounded-full px-2.5 py-1 ml-auto">
+                <FolderIcon size={12} />
+                {item.folder_name}
+              </span>
+            )}
           </div>
 
           {item.title && <h2 className="font-heading text-text-primary text-2xl font-bold">{item.title}</h2>}

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, Link2, Mic, FileImage, LayoutGrid } from "lucide-react";
+import { FileText, Link2, Mic, FileImage, LayoutGrid, Folder as FolderIcon, RefreshCw, Rows3 } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
-import type { SavedItem } from "../api/types";
+import type { Folder, SavedItem } from "../api/types";
 import { SavedItemCard } from "../components/SavedItemCard";
 import { SearchBar } from "../components/SearchBar";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
@@ -16,10 +16,15 @@ const FILTERS = [
   { id: "document", label: "Documents", Icon: FileImage, match: (t: string) => t === "document" },
 ] as const;
 
+const UNSORTED_ID = "__unsorted__";
+
 export function Library() {
   const [items, setItems] = useState<SavedItem[] | null>(null);
+  const [folders, setFolders] = useState<Folder[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [grouped, setGrouped] = useState(true);
+  const [reorganizing, setReorganizing] = useState(false);
 
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
@@ -27,11 +32,15 @@ export function Library() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
 
+  function refresh() {
+    return Promise.all([api.listSavedItems(), api.listFolders()]).then(([savedItems, folderList]) => {
+      setItems(savedItems);
+      setFolders(folderList);
+    });
+  }
+
   useEffect(() => {
-    api
-      .listSavedItems()
-      .then(setItems)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load library"));
+    refresh().catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load library"));
   }, []);
 
   useEffect(() => {
@@ -59,13 +68,60 @@ export function Library() {
   }, [debouncedQuery]);
 
   const isSearchMode = debouncedQuery.length > 0;
+
+  async function handleReorganize() {
+    setReorganizing(true);
+    setError(null);
+    try {
+      await api.recomputeFolders();
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to re-organize folders");
+    } finally {
+      setReorganizing(false);
+    }
+  }
+
   const activeFilter = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
   const baseList = isSearchMode ? searchResults ?? [] : items ?? [];
   const filtered = baseList.filter((item) => activeFilter.match(item.source_type));
 
+  const sections: { id: string; name: string; items: SavedItem[] }[] = [];
+  if (!isSearchMode && grouped && folders) {
+    for (const folder of folders) {
+      const folderItems = filtered.filter((item) => item.folder_id === folder.id);
+      if (folderItems.length > 0) sections.push({ id: folder.id, name: folder.name, items: folderItems });
+    }
+    const unsorted = filtered.filter((item) => !item.folder_id || !folders.some((f) => f.id === item.folder_id));
+    if (unsorted.length > 0) sections.push({ id: UNSORTED_ID, name: "Unsorted", items: unsorted });
+  }
+
   return (
     <div className="max-w-[1200px] mx-auto px-6 flex flex-col gap-4">
-      <h2 className="font-heading text-text-primary text-2xl font-bold mb-2">Library</h2>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h2 className="font-heading text-text-primary text-2xl font-bold">Library</h2>
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setGrouped((g) => !g)}
+            title={grouped ? "Show flat list" : "Group by folder"}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs border bg-surface text-text-secondary border-text-secondary/20"
+          >
+            {grouped ? <FolderIcon size={14} /> : <Rows3 size={14} />}
+            {grouped ? "Folders" : "Flat"}
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleReorganize}
+            disabled={reorganizing}
+            title="Re-organize into folders now"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs border bg-surface text-text-secondary border-text-secondary/20 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={reorganizing ? "animate-spin" : ""} />
+            {reorganizing ? "Organizing..." : "Re-organize"}
+          </motion.button>
+        </div>
+      </div>
 
       <SearchBar value={query} onChange={setQuery} placeholder="Search titles, transcripts, and sources..." />
 
@@ -108,13 +164,34 @@ export function Library() {
         </>
       )}
 
-      <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <AnimatePresence mode="popLayout">
-          {filtered.map((item) => (
-            <SavedItemCard key={item.id} item={item} />
+      {!isSearchMode && grouped && folders ? (
+        <div className="flex flex-col gap-6">
+          {sections.map((section) => (
+            <div key={section.id} className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <FolderIcon size={16} className="text-accent" />
+                <h3 className="font-heading text-text-primary font-semibold">{section.name}</h3>
+                <span className="text-text-secondary text-xs">{section.items.length}</span>
+              </div>
+              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <AnimatePresence mode="popLayout">
+                  {section.items.map((item) => (
+                    <SavedItemCard key={item.id} item={item} />
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </div>
           ))}
-        </AnimatePresence>
-      </motion.div>
+        </div>
+      ) : (
+        <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <AnimatePresence mode="popLayout">
+            {filtered.map((item) => (
+              <SavedItemCard key={item.id} item={item} />
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
     </div>
   );
 }

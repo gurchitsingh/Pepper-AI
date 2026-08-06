@@ -34,6 +34,19 @@ class User(Base):
     )
 
 
+class Folder(Base):
+    __tablename__ = "folders"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+    __table_args__ = (
+        Index("ix_folders_user_id_created_at", "user_id", "created_at"),
+    )
+
+
 class SavedItem(Base):
     __tablename__ = "saved_items"
 
@@ -47,6 +60,10 @@ class SavedItem(Base):
     duration_seconds = Column(Float, nullable=True)
     status = Column(String, nullable=False, default="pending")
     failure_reason = Column(String, nullable=True)
+    # mean-pooled from this item's chunk embeddings once ingestion finishes;
+    # NULL until then (or if embedding was unavailable). Used for folder clustering.
+    embedding = Column(Vector(EMBEDDING_DIM), nullable=True)
+    folder_id = Column(UUID(as_uuid=True), ForeignKey("folders.id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     __table_args__ = (

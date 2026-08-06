@@ -12,6 +12,15 @@ export interface SavedItem {
   failure_reason: string | null;
   transcript: string | null;
   duration_seconds: number | null;
+  folder_id: string | null;
+  folder_name: string | null;
+  created_at: string;
+}
+
+export interface Folder {
+  id: string;
+  name: string;
+  item_count: number;
   created_at: string;
 }
 

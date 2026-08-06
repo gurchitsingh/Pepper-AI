@@ -11,8 +11,9 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.billing import check_usage_allowed
 from app.database import get_db
+from app.folders import enqueue_recompute_folders
 from app.ingestion.tasks import process_saved_item, store_chunks
-from app.models.models import Chunk, SavedItem, Transcript, TranscriptSegment, User
+from app.models.models import Chunk, Folder, SavedItem, Transcript, TranscriptSegment, User
 from app.queue import ingestion_queue
 from app.schemas import SavedItemCreate, SavedItemOut, SegmentOut
 
@@ -43,7 +44,7 @@ def _fetch_owned_item(db: Session, item_id: uuid.UUID, current_user: User) -> Sa
     return item
 
 
-def _to_out(item: SavedItem, transcript_text: str | None) -> SavedItemOut:
+def _to_out(item: SavedItem, transcript_text: str | None, folder_name: str | None = None) -> SavedItemOut:
     return SavedItemOut(
         id=item.id,
         source_type=item.source_type,
@@ -53,6 +54,8 @@ def _to_out(item: SavedItem, transcript_text: str | None) -> SavedItemOut:
         failure_reason=item.failure_reason,
         transcript=transcript_text,
         duration_seconds=item.duration_seconds,
+        folder_id=item.folder_id,
+        folder_name=folder_name,
         created_at=item.created_at,
     )
 
@@ -74,9 +77,10 @@ def create_saved_item(
         db.add(item)
         db.flush()
         db.add(Transcript(saved_item_id=item.id, raw_text=payload.content))
-        store_chunks(db, item.id, payload.content, segments=[], content_type="note")
+        store_chunks(db, item, payload.content, segments=[], content_type="note")
         db.commit()
         db.refresh(item)
+        enqueue_recompute_folders(current_user.id)
         return _to_out(item, payload.content)
 
     item = SavedItem(
@@ -141,8 +145,13 @@ def list_saved_items(
     item_ids = [item.id for item in items]
     transcripts = db.query(Transcript).filter(Transcript.saved_item_id.in_(item_ids)).all()
     transcript_by_item = {t.saved_item_id: t.raw_text for t in transcripts}
+    folders = db.query(Folder).filter(Folder.user_id == current_user.id).all()
+    folder_name_by_id = {f.id: f.name for f in folders}
 
-    return [_to_out(item, transcript_by_item.get(item.id)) for item in items]
+    return [
+        _to_out(item, transcript_by_item.get(item.id), folder_name_by_id.get(item.folder_id))
+        for item in items
+    ]
 
 
 @router.get("/search", response_model=list[SavedItemOut])
@@ -187,7 +196,11 @@ def get_saved_item(
 ):
     item = _fetch_owned_item(db, item_id, current_user)
     transcript = db.query(Transcript).filter(Transcript.saved_item_id == item.id).first()
-    return _to_out(item, transcript.raw_text if transcript else None)
+    folder_name = None
+    if item.folder_id is not None:
+        folder = db.get(Folder, item.folder_id)
+        folder_name = folder.name if folder else None
+    return _to_out(item, transcript.raw_text if transcript else None, folder_name)
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
