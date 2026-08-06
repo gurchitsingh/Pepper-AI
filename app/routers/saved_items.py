@@ -3,6 +3,7 @@ import shutil
 import uuid
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -116,6 +117,40 @@ def list_saved_items(
         .order_by(SavedItem.created_at.desc())
         .all()
     )
+    item_ids = [item.id for item in items]
+    transcripts = db.query(Transcript).filter(Transcript.saved_item_id.in_(item_ids)).all()
+    transcript_by_item = {t.saved_item_id: t.raw_text for t in transcripts}
+
+    return [_to_out(item, transcript_by_item.get(item.id)) for item in items]
+
+
+@router.get("/search", response_model=list[SavedItemOut])
+def search_saved_items(
+    q: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = q.strip()
+    if not query:
+        return []
+
+    pattern = f"%{query}%"
+    items = (
+        db.query(SavedItem)
+        .outerjoin(Transcript, Transcript.saved_item_id == SavedItem.id)
+        .filter(
+            SavedItem.user_id == current_user.id,
+            or_(
+                SavedItem.title.ilike(pattern),
+                SavedItem.source_type.ilike(pattern),
+                Transcript.raw_text.ilike(pattern),
+            ),
+        )
+        .order_by(SavedItem.created_at.desc())
+        .distinct()
+        .all()
+    )
+
     item_ids = [item.id for item in items]
     transcripts = db.query(Transcript).filter(Transcript.saved_item_id.in_(item_ids)).all()
     transcript_by_item = {t.saved_item_id: t.raw_text for t in transcripts}

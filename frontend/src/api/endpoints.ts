@@ -62,6 +62,10 @@ export function listSavedItems() {
   return apiFetch<SavedItem[]>("/saved-items");
 }
 
+export function searchSavedItems(query: string) {
+  return apiFetch<SavedItem[]>(`/saved-items/search?q=${encodeURIComponent(query)}`);
+}
+
 export function chat(question: string) {
   return apiFetch<ChatResponse>("/chat", {
     method: "POST",
