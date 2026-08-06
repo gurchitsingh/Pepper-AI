@@ -1,6 +1,7 @@
 import re
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
@@ -83,9 +84,17 @@ class ChatSource(BaseModel):
     end_time: float | None
 
 
+class WebSource(BaseModel):
+    title: str | None
+    url: str
+    content: str | None = None
+
+
 class ChatResponse(BaseModel):
     answer: str
-    sources: list[ChatSource]
+    sources: list[ChatSource] = Field(default_factory=list)
+    web_sources: list[WebSource] = Field(default_factory=list)
+    answer_source: Literal["saved_content", "web_search"]
 
 
 class BillingStatusOut(BaseModel):
