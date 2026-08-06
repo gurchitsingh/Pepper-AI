@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type TouchEvent } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import {
   MeetPepperIllustration,
   SaveAnythingIllustration,
@@ -32,20 +32,33 @@ const SLIDES = [
 ];
 
 const AUTO_ADVANCE_MS = 3000;
-const SWIPE_THRESHOLD_PX = 50;
-const TRANSITION = { duration: 0.13, ease: "easeOut" as const };
+const TRANSITION = { duration: 0.2, ease: "easeOut" as const };
+const SLIDE_TRANSITION = {
+  x: { type: "spring" as const, stiffness: 320, damping: 32 },
+  opacity: { duration: 0.15 },
+};
+
+// Product of drag distance and release velocity; a fast flick over a short
+// distance should paginate just as readily as a slow drag across the screen.
+const SWIPE_CONFIDENCE_THRESHOLD = 10000;
+function swipePower(offset: number, velocity: number) {
+  return Math.abs(offset) * velocity;
+}
+
+// A deliberate drag past this point pages even when released slowly, so the
+// gesture doesn't rely on flick velocity alone.
+const SWIPE_DISTANCE_THRESHOLD = 80;
 
 const slideVariants = {
-  enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 24 : -24 }),
+  enter: (dir: number) => ({ opacity: 0, x: dir > 0 ? 300 : -300 }),
   center: { opacity: 1, x: 0 },
-  exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -24 : 24 }),
+  exit: (dir: number) => ({ opacity: 0, x: dir > 0 ? -300 : 300 }),
 };
 
 export function Slides() {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const navigate = useNavigate();
-  const touchStartX = useRef<number | null>(null);
   const isLast = index === SLIDES.length - 1;
 
   useEffect(() => {
@@ -69,36 +82,30 @@ export function Slides() {
   }, [index, isLast]);
 
   function goTo(next: number) {
+    if (next < 0 || next >= SLIDES.length) return;
     setDirection(next > index ? 1 : -1);
     setIndex(next);
   }
 
-  function handleTouchStart(e: TouchEvent) {
-    touchStartX.current = e.touches[0].clientX;
-  }
-
-  function handleTouchEnd(e: TouchEvent) {
-    if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
-    if (delta < -SWIPE_THRESHOLD_PX) goTo(Math.min(index + 1, SLIDES.length - 1));
-    else if (delta > SWIPE_THRESHOLD_PX) goTo(Math.max(index - 1, 0));
-    touchStartX.current = null;
+  function handleDragEnd(_e: unknown, info: PanInfo) {
+    const swipe = swipePower(info.offset.x, info.velocity.x);
+    if (swipe < -SWIPE_CONFIDENCE_THRESHOLD || info.offset.x < -SWIPE_DISTANCE_THRESHOLD) {
+      goTo(index + 1);
+    } else if (swipe > SWIPE_CONFIDENCE_THRESHOLD || info.offset.x > SWIPE_DISTANCE_THRESHOLD) {
+      goTo(index - 1);
+    }
   }
 
   const slide = SLIDES[index];
 
   return (
-    <div
-      className="relative min-h-screen flex flex-col bg-bg"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="relative min-h-screen flex flex-col bg-bg">
       <div className="absolute top-6 left-6 font-heading text-accent text-lg font-bold">
         Pepper
       </div>
 
-      <div className="flex-grow flex flex-col items-center justify-center text-center px-8 gap-4 overflow-hidden">
-        <AnimatePresence mode="popLayout" custom={direction} initial={false}>
+      <div className="relative flex-grow overflow-hidden">
+        <AnimatePresence custom={direction} initial={false}>
           <motion.div
             key={index}
             custom={direction}
@@ -106,8 +113,12 @@ export function Slides() {
             initial="enter"
             animate="center"
             exit="exit"
-            transition={TRANSITION}
-            className="flex flex-col items-center gap-4"
+            transition={SLIDE_TRANSITION}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={1}
+            onDragEnd={handleDragEnd}
+            className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 gap-4"
           >
             <motion.div
               initial={{ opacity: 0, y: 8 }}
