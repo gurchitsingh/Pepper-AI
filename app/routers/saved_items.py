@@ -12,7 +12,7 @@ from app.auth import get_current_user
 from app.billing import check_usage_allowed
 from app.database import get_db
 from app.ingestion.tasks import process_saved_item, store_chunks
-from app.models.models import SavedItem, Transcript, TranscriptSegment, User
+from app.models.models import Chunk, SavedItem, Transcript, TranscriptSegment, User
 from app.queue import ingestion_queue
 from app.schemas import SavedItemCreate, SavedItemOut, SegmentOut
 
@@ -188,6 +188,38 @@ def get_saved_item(
     item = _fetch_owned_item(db, item_id, current_user)
     transcript = db.query(Transcript).filter(Transcript.saved_item_id == item.id).first()
     return _to_out(item, transcript.raw_text if transcript else None)
+
+
+@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_saved_item(
+    item_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = (
+        db.query(SavedItem)
+        .filter(SavedItem.id == item_id, SavedItem.user_id == current_user.id)
+        .first()
+    )
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Saved item not found")
+
+    transcript_ids = [
+        t.id for t in db.query(Transcript.id).filter(Transcript.saved_item_id == item.id).all()
+    ]
+    if transcript_ids:
+        db.query(TranscriptSegment).filter(TranscriptSegment.transcript_id.in_(transcript_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(Transcript).filter(Transcript.id.in_(transcript_ids)).delete(synchronize_session=False)
+
+    db.query(Chunk).filter(Chunk.saved_item_id == item.id).delete(synchronize_session=False)
+
+    if item.uploaded_file_path and os.path.exists(item.uploaded_file_path):
+        os.remove(item.uploaded_file_path)
+
+    db.delete(item)
+    db.commit()
 
 
 @router.get("/{item_id}/segments", response_model=list[SegmentOut])

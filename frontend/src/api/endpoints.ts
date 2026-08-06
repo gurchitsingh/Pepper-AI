@@ -70,6 +70,10 @@ export function searchSavedItems(query: string) {
   return apiFetch<SavedItem[]>(`/saved-items/search?q=${encodeURIComponent(query)}`);
 }
 
+export function deleteSavedItem(id: string) {
+  return apiFetch<void>(`/saved-items/${id}`, { method: "DELETE" });
+}
+
 export function chat(question: string) {
   return apiFetch<ChatResponse>("/chat", {
     method: "POST",
