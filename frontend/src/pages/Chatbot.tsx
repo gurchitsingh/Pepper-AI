@@ -1,10 +1,12 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, FileText, Link2, Mic, FileImage, RotateCcw } from "lucide-react";
+import { Send, FileText, Link2, Mic, FileImage, RotateCcw, ChevronDown } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
-import type { ChatSource } from "../api/types";
+import type { ChatSource, SavedItem } from "../api/types";
 import { useChat, type Message } from "../chat/ChatContext";
+import { detectSmallTalk, timeOfDayGreeting } from "../chat/smallTalk";
+import { suggestedQuestions } from "../chat/suggestedQuestions";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -15,6 +17,8 @@ const TYPE_ICON: Record<string, typeof FileText> = {
   instagram: Link2,
   tiktok: Link2,
 };
+
+const NEAR_BOTTOM_THRESHOLD_PX = 80;
 
 function SourceCard({ source }: { source: ChatSource }) {
   const [expanded, setExpanded] = useState(false);
@@ -53,17 +57,92 @@ export function Chatbot() {
   const { messages, setMessages, newSession } = useChat();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
+  const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const q = question.trim();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const nearBottomRef = useRef(true);
+  // While a programmatic smooth-scroll is in flight, the scroll events it
+  // generates fire handleScroll with intermediate (still far-from-bottom)
+  // positions; without this guard those events flip showScrollButton back
+  // on and it can get stuck since the final settle doesn't always re-fire.
+  const autoScrollingRef = useRef(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+
+  useEffect(() => {
+    api
+      .listSavedItems()
+      .then(setSavedItems)
+      .catch(() => {});
+  }, []);
+
+  function smoothScrollToBottom(el: HTMLDivElement) {
+    autoScrollingRef.current = true;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+    let settled = false;
+    const settle = () => {
+      if (settled) return;
+      settled = true;
+      autoScrollingRef.current = false;
+      nearBottomRef.current = true;
+      setShowScrollButton(false);
+      el.removeEventListener("scrollend", settle);
+    };
+    // "scrollend" resolves this as soon as the animation actually finishes,
+    // but isn't universally fired (e.g. some automated/headless setups) --
+    // the timeout is a guaranteed fallback so autoScrollingRef never gets
+    // stuck true and silently breaks the button.
+    el.addEventListener("scrollend", settle, { once: true });
+    setTimeout(settle, 500);
+  }
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (nearBottomRef.current) {
+      smoothScrollToBottom(el);
+    } else {
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setShowScrollButton(distanceFromBottom > NEAR_BOTTOM_THRESHOLD_PX);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, loading]);
+
+  const suggestions = useMemo(() => suggestedQuestions(savedItems, messages), [savedItems, messages]);
+
+  function handleScroll() {
+    if (autoScrollingRef.current) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    const nearBottom = distanceFromBottom < NEAR_BOTTOM_THRESHOLD_PX;
+    nearBottomRef.current = nearBottom;
+    setShowScrollButton(!nearBottom);
+  }
+
+  function scrollToBottom() {
+    const el = scrollRef.current;
+    if (!el) return;
+    smoothScrollToBottom(el);
+  }
+
+  async function submitQuestion(raw: string) {
+    const q = raw.trim();
     if (!q || loading) return;
 
     const userMessage: Message = { id: crypto.randomUUID(), role: "user", content: q };
     setMessages((prev) => [...prev, userMessage]);
     setQuestion("");
-    setLoading(true);
 
+    const smallTalk = detectSmallTalk(q);
+    if (smallTalk) {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 250));
+      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: smallTalk.reply }]);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     try {
       const res = await api.chat(q);
       setMessages((prev) => [
@@ -76,6 +155,11 @@ export function Chatbot() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    submitQuestion(question);
   }
 
   return (
@@ -93,50 +177,90 @@ export function Chatbot() {
         </button>
       </div>
 
-      <div className="flex-grow overflow-y-auto flex flex-col gap-4 pb-2">
-        {messages.length === 0 && (
-          <p className="text-text-secondary text-sm">
-            Ask Pepper anything about what you've saved — it'll answer, and show its sources.
-          </p>
-        )}
+      <div className="relative flex-grow min-h-0">
+        <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto flex flex-col gap-4 pb-2">
+          {messages.length === 0 && (
+            <div className="glass-card rounded-2xl p-5 flex flex-col gap-2">
+              <p className="font-heading text-text-primary text-lg font-semibold">
+                {timeOfDayGreeting()} I'm Pepper.
+              </p>
+              <p className="text-text-secondary text-sm">
+                Ask me anything about what you've saved, or just say hello — I'm around either way.
+              </p>
+            </div>
+          )}
 
-        <AnimatePresence initial={false}>
-          {messages.map((m) => (
+          <AnimatePresence initial={false}>
+            {messages.map((m) => (
+              <motion.div
+                key={m.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
+              >
+                <div
+                  className={`rounded-2xl px-4 py-3 max-w-[85%] ${
+                    m.role === "user" ? "bg-accent text-accent-contrast" : "glass-card text-text-primary"
+                  }`}
+                >
+                  {m.content}
+                </div>
+                {m.sources && m.sources.length > 0 && (
+                  <div className="flex flex-col gap-2 max-w-[85%] w-full">
+                    {m.sources.map((s, i) => (
+                      <SourceCard key={`${m.id}-${i}`} source={s} />
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {loading && (
             <motion.div
-              key={m.id}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25 }}
-              className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
+              className="glass-card rounded-2xl px-4 py-3 text-text-secondary text-sm w-fit"
             >
-              <div
-                className={`rounded-2xl px-4 py-3 max-w-[85%] ${
-                  m.role === "user" ? "bg-accent text-accent-contrast" : "glass-card text-text-primary"
-                }`}
-              >
-                {m.content}
-              </div>
-              {m.sources && m.sources.length > 0 && (
-                <div className="flex flex-col gap-2 max-w-[85%] w-full">
-                  {m.sources.map((s, i) => (
-                    <SourceCard key={`${m.id}-${i}`} source={s} />
-                  ))}
-                </div>
-              )}
+              Thinking...
             </motion.div>
-          ))}
-        </AnimatePresence>
+          )}
+        </div>
 
-        {loading && (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="glass-card rounded-2xl px-4 py-3 text-text-secondary text-sm w-fit"
-          >
-            Thinking...
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {showScrollButton && (
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 8 }}
+              whileTap={{ scale: 0.92 }}
+              onClick={scrollToBottom}
+              aria-label="Scroll to latest message"
+              className="absolute bottom-3 right-3 w-10 h-10 rounded-full glass-card shadow-lg flex items-center justify-center text-text-primary"
+            >
+              <ChevronDown size={18} />
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
+
+      {suggestions.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {suggestions.map((q) => (
+            <button
+              key={q}
+              type="button"
+              disabled={loading}
+              onClick={() => submitQuestion(q)}
+              className="shrink-0 text-xs text-text-secondary glass-card rounded-full px-3 py-2 hover:text-text-primary transition-colors disabled:opacity-40 whitespace-nowrap"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="flex gap-2 pb-2">
         <input
