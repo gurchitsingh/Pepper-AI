@@ -62,6 +62,10 @@ export function listSavedItems() {
   return apiFetch<SavedItem[]>("/saved-items");
 }
 
+export function deleteSavedItem(id: string) {
+  return apiFetch<void>(`/saved-items/${id}`, { method: "DELETE" });
+}
+
 export function chat(question: string) {
   return apiFetch<ChatResponse>("/chat", {
     method: "POST",
