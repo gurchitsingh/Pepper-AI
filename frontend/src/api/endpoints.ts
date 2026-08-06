@@ -1,5 +1,5 @@
 import { apiFetch } from "./client";
-import type { ChatResponse, SavedItem, Token, UserOut } from "./types";
+import type { ChatResponse, Folder, SavedItem, Token, UserOut } from "./types";
 
 export function signup(email: string, password: string, name?: string) {
   return apiFetch<Token>("/auth/signup", {
@@ -60,6 +60,14 @@ export function uploadSavedItem(sourceType: string, file: File | Blob, filename?
 
 export function listSavedItems() {
   return apiFetch<SavedItem[]>("/saved-items");
+}
+
+export function listFolders() {
+  return apiFetch<Folder[]>("/folders");
+}
+
+export function recomputeFolders() {
+  return apiFetch<Folder[]>("/folders/recompute", { method: "POST" });
 }
 
 export function chat(question: string) {

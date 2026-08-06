@@ -1,8 +1,11 @@
 import logging
 import uuid
 
+import numpy as np
+
 from app.database import SessionLocal
 from app.embeddings import EmbeddingError, embed_texts
+from app.folders import enqueue_recompute_folders
 from app.ingestion import article, document, media, youtube
 from app.ingestion.chunking import chunk_segments, chunk_text
 from app.ingestion.common import IngestionError
@@ -20,7 +23,7 @@ HANDLERS = {
 }
 
 
-def store_chunks(db, saved_item_id, raw_text: str, segments, content_type: str) -> int:
+def store_chunks(db, item: SavedItem, raw_text: str, segments, content_type: str) -> int:
     """Chunks by timed segments when available (YouTube/Whisper), otherwise by
     paragraph/char count (articles, notes, documents). Persists Chunk rows with
     chunk_index/content_type/token_count, embedding each chunk via Voyage AI if
@@ -30,6 +33,10 @@ def store_chunks(db, saved_item_id, raw_text: str, segments, content_type: str) 
     stored with embedding left NULL -- ingestion must not fail just because
     embeddings aren't available yet. `scripts/generate_embeddings.py` backfills
     any chunk with a NULL embedding once a key is available.
+
+    Also sets `item.embedding` to the mean of the chunk vectors that did embed --
+    this item-level embedding is what folder clustering groups on. Left NULL if
+    none of the chunks embedded.
     Returns the number of chunks created.
     """
     chunks = chunk_segments(segments) if segments else chunk_text(raw_text)
@@ -40,12 +47,12 @@ def store_chunks(db, saved_item_id, raw_text: str, segments, content_type: str) 
     try:
         vectors = embed_texts([c.text for c in chunks], input_type="document")
     except EmbeddingError as e:
-        logger.warning("Embedding skipped for saved_item %s: %s", saved_item_id, e)
+        logger.warning("Embedding skipped for saved_item %s: %s", item.id, e)
 
     for index, (c, vector) in enumerate(zip(chunks, vectors)):
         db.add(
             Chunk(
-                saved_item_id=saved_item_id,
+                saved_item_id=item.id,
                 text=c.text,
                 start_time=c.start_time,
                 end_time=c.end_time,
@@ -55,6 +62,11 @@ def store_chunks(db, saved_item_id, raw_text: str, segments, content_type: str) 
                 embedding=vector,
             )
         )
+
+    valid_vectors = [v for v in vectors if v is not None]
+    if valid_vectors:
+        item.embedding = np.mean(np.array(valid_vectors), axis=0).tolist()
+
     return len(chunks)
 
 
@@ -98,7 +110,7 @@ def process_saved_item(saved_item_id: str) -> None:
         for seg in result.segments:
             db.add(TranscriptSegment(transcript_id=transcript_id, start_time=seg.start, end_time=seg.end, text=seg.text))
 
-        store_chunks(db, item.id, result.raw_text, result.segments, content_type=item.source_type)
+        store_chunks(db, item, result.raw_text, result.segments, content_type=item.source_type)
 
         if result.title:
             item.title = result.title
@@ -108,5 +120,7 @@ def process_saved_item(saved_item_id: str) -> None:
             item.duration_seconds = max(seg.end for seg in result.segments)
         item.status = "ready"
         db.commit()
+
+        enqueue_recompute_folders(item.user_id)
     finally:
         db.close()

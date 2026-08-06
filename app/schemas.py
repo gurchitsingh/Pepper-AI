@@ -59,6 +59,17 @@ class SavedItemOut(BaseModel):
     failure_reason: str | None = None
     transcript: str | None = None
     duration_seconds: float | None = None
+    folder_id: uuid.UUID | None = None
+    folder_name: str | None = None
+    created_at: datetime
+
+
+class FolderOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    item_count: int
     created_at: datetime
 
 

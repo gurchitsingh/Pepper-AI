@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, Link2, Mic, FileImage, LayoutGrid } from "lucide-react";
+import { FileText, Link2, Mic, FileImage, LayoutGrid, Folder as FolderIcon, RefreshCw, Rows3 } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
-import type { SavedItem } from "../api/types";
+import type { Folder, SavedItem } from "../api/types";
 
 const FILTERS = [
   { id: "all", label: "All", Icon: LayoutGrid, match: () => true },
@@ -31,6 +31,8 @@ const STATUS_COLOR: Record<SavedItem["status"], string> = {
   failed: "text-error",
 };
 
+const UNSORTED_ID = "__unsorted__";
+
 function itemTitle(item: SavedItem): string {
   if (item.title) return item.title;
   if (item.source_type === "note" && item.transcript) {
@@ -39,24 +41,108 @@ function itemTitle(item: SavedItem): string {
   return item.source_url ?? `${item.source_type} item`;
 }
 
+function ItemCard({ item }: { item: SavedItem }) {
+  const Icon = TYPE_ICON[item.source_type] ?? FileText;
+  return (
+    <motion.div
+      key={item.id}
+      layout
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.25 }}
+    >
+      <Link
+        to={`/library/${item.id}`}
+        className="glass-card rounded-2xl p-4 flex items-center gap-3 w-full text-left"
+      >
+        <div className="w-10 h-10 rounded-full bg-bg flex items-center justify-center shrink-0">
+          <Icon size={18} className="text-accent" />
+        </div>
+        <div className="min-w-0 flex-grow">
+          <span className="text-[10px] text-text-secondary font-medium uppercase tracking-widest">
+            {item.source_type}
+          </span>
+          <h3 className="font-body text-text-primary font-medium truncate">{itemTitle(item)}</h3>
+          {item.failure_reason && <p className="text-error text-xs mt-1 truncate">{item.failure_reason}</p>}
+        </div>
+        <span className={`text-sm font-medium shrink-0 ${STATUS_COLOR[item.status]}`}>{item.status}</span>
+      </Link>
+    </motion.div>
+  );
+}
+
 export function Library() {
   const [items, setItems] = useState<SavedItem[] | null>(null);
+  const [folders, setFolders] = useState<Folder[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<(typeof FILTERS)[number]["id"]>("all");
+  const [grouped, setGrouped] = useState(true);
+  const [reorganizing, setReorganizing] = useState(false);
+
+  function refresh() {
+    return Promise.all([api.listSavedItems(), api.listFolders()]).then(([savedItems, folderList]) => {
+      setItems(savedItems);
+      setFolders(folderList);
+    });
+  }
 
   useEffect(() => {
-    api
-      .listSavedItems()
-      .then(setItems)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load library"));
+    refresh().catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load library"));
   }, []);
+
+  async function handleReorganize() {
+    setReorganizing(true);
+    setError(null);
+    try {
+      await api.recomputeFolders();
+      await refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Failed to re-organize folders");
+    } finally {
+      setReorganizing(false);
+    }
+  }
 
   const activeFilter = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
   const filtered = items?.filter((item) => activeFilter.match(item.source_type)) ?? [];
 
+  const sections: { id: string; name: string; items: SavedItem[] }[] = [];
+  if (grouped && folders) {
+    for (const folder of folders) {
+      const folderItems = filtered.filter((item) => item.folder_id === folder.id);
+      if (folderItems.length > 0) sections.push({ id: folder.id, name: folder.name, items: folderItems });
+    }
+    const unsorted = filtered.filter((item) => !item.folder_id || !folders.some((f) => f.id === item.folder_id));
+    if (unsorted.length > 0) sections.push({ id: UNSORTED_ID, name: "Unsorted", items: unsorted });
+  }
+
   return (
     <div className="max-w-[1200px] mx-auto px-6 flex flex-col gap-4">
-      <h2 className="font-heading text-text-primary text-2xl font-bold mb-2">Library</h2>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <h2 className="font-heading text-text-primary text-2xl font-bold">Library</h2>
+        <div className="flex items-center gap-2">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setGrouped((g) => !g)}
+            title={grouped ? "Show flat list" : "Group by folder"}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs border bg-surface text-text-secondary border-text-secondary/20"
+          >
+            {grouped ? <FolderIcon size={14} /> : <Rows3 size={14} />}
+            {grouped ? "Folders" : "Flat"}
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleReorganize}
+            disabled={reorganizing}
+            title="Re-organize into folders now"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs border bg-surface text-text-secondary border-text-secondary/20 disabled:opacity-50"
+          >
+            <RefreshCw size={14} className={reorganizing ? "animate-spin" : ""} />
+            {reorganizing ? "Organizing..." : "Re-organize"}
+          </motion.button>
+        </div>
+      </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {FILTERS.map(({ id, label, Icon }) => {
@@ -85,42 +171,34 @@ export function Library() {
         <p className="text-text-secondary text-sm">Nothing filed under this yet.</p>
       )}
 
-      <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <AnimatePresence mode="popLayout">
-          {filtered.map((item) => {
-            const Icon = TYPE_ICON[item.source_type] ?? FileText;
-            return (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.25 }}
-              >
-                <Link
-                  to={`/library/${item.id}`}
-                  className="glass-card rounded-2xl p-4 flex items-center gap-3 w-full text-left"
-                >
-                  <div className="w-10 h-10 rounded-full bg-bg flex items-center justify-center shrink-0">
-                    <Icon size={18} className="text-accent" />
-                  </div>
-                  <div className="min-w-0 flex-grow">
-                    <span className="text-[10px] text-text-secondary font-medium uppercase tracking-widest">
-                      {item.source_type}
-                    </span>
-                    <h3 className="font-body text-text-primary font-medium truncate">{itemTitle(item)}</h3>
-                    {item.failure_reason && (
-                      <p className="text-error text-xs mt-1 truncate">{item.failure_reason}</p>
-                    )}
-                  </div>
-                  <span className={`text-sm font-medium shrink-0 ${STATUS_COLOR[item.status]}`}>{item.status}</span>
-                </Link>
+      {grouped && folders ? (
+        <div className="flex flex-col gap-6">
+          {sections.map((section) => (
+            <div key={section.id} className="flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <FolderIcon size={16} className="text-accent" />
+                <h3 className="font-heading text-text-primary font-semibold">{section.name}</h3>
+                <span className="text-text-secondary text-xs">{section.items.length}</span>
+              </div>
+              <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <AnimatePresence mode="popLayout">
+                  {section.items.map((item) => (
+                    <ItemCard key={item.id} item={item} />
+                  ))}
+                </AnimatePresence>
               </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <AnimatePresence mode="popLayout">
+            {filtered.map((item) => (
+              <ItemCard key={item.id} item={item} />
+            ))}
+          </AnimatePresence>
+        </motion.div>
+      )}
     </div>
   );
 }
