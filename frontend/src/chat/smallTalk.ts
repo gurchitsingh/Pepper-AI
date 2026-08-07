@@ -1,4 +1,4 @@
-export type SmallTalkKind = "greeting" | "how-are-you" | "thanks" | "bye" | "time";
+export type SmallTalkKind = "greeting" | "how-are-you" | "thanks" | "bye" | "time" | "weather";
 
 export interface SmallTalkMatch {
   kind: SmallTalkKind;
@@ -13,7 +13,11 @@ const THANKS_RE = /^(thanks?( you)?( so much| a lot)?|thx|ty|cheers|appreciate i
 const BYE_RE =
   /^(bye|goodbye|good ?bye|see ya|see you( later| soon)?|later|good ?night|take care|gotta go|catch you later)[\s!.,]*$/i;
 const TIME_RE =
-  /\b(what'?s the time|what time is it|current time|tell me the time|do you know the time|time check)\b/i;
+  /\b(what'?s the time|what time (is it|do you have)|current time|tell me the time|do you know (the time|what time it is)|time check|got the time)\b/i;
+// Covers direct asks ("what's the weather like") as well as rhetorical remarks
+// people actually type ("the weather is good, isn't it?", "lovely weather today").
+const WEATHER_RE =
+  /\b(what'?s the weather( like)?|how'?s the weather|what'?s it like outside|is it (raining|snowing|sunny|hot|cold|cloudy|windy|humid)\b|(nice|good|great|lovely|beautiful|awful|terrible|bad|crazy|wild) weather|weather('s| is)( so| pretty| really)? (nice|good|great|lovely|beautiful|awful|terrible|bad|crazy|wild|rough)|weather (today|outside|out there))\b/i;
 
 const GREETING_REPLIES = [
   "Hey — good to see you. What's on your mind?",
@@ -35,6 +39,14 @@ const THANKS_REPLIES = [
 
 const BYE_REPLIES = ["Take care — I'll be here when you're back.", "Bye for now.", "See you soon."];
 
+// No weather API/geolocation is wired up, so these acknowledge the question
+// without ever claiming to know real conditions.
+const WEATHER_REPLIES = [
+  "I can't check real weather yet, so I'll take your word for it!",
+  "No weather feed on my end — you'd know better than me there.",
+  "Can't say myself, I don't have live weather data hooked up.",
+];
+
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
@@ -42,7 +54,7 @@ function pick<T>(arr: T[]): T {
 function currentTimeReply(): string {
   const now = new Date();
   const timeStr = now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  return `It's ${timeStr} right now.`;
+  return pick([`It's ${timeStr} right now.`, `Right now it's ${timeStr}.`, `${timeStr} on my end.`]);
 }
 
 export function detectSmallTalk(rawInput: string): SmallTalkMatch | null {
@@ -50,6 +62,7 @@ export function detectSmallTalk(rawInput: string): SmallTalkMatch | null {
   if (!input) return null;
 
   if (TIME_RE.test(input)) return { kind: "time", reply: currentTimeReply() };
+  if (WEATHER_RE.test(input)) return { kind: "weather", reply: pick(WEATHER_REPLIES) };
   if (GREETING_RE.test(input)) return { kind: "greeting", reply: pick(GREETING_REPLIES) };
   if (HOW_ARE_YOU_RE.test(input)) return { kind: "how-are-you", reply: pick(HOW_ARE_YOU_REPLIES) };
   if (THANKS_RE.test(input)) return { kind: "thanks", reply: pick(THANKS_REPLIES) };
