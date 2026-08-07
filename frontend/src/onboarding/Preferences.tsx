@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { useTheme } from "../theme/ThemeContext";
-import { THEMES } from "../theme/themes";
+import { ThemePicker } from "../components/ThemePicker";
 
 const INTERESTS = [
   "Technology",
@@ -16,7 +14,6 @@ const INTERESTS = [
 ];
 
 export function Preferences() {
-  const { themeId, setThemeId } = useTheme();
   const [interests, setInterests] = useState<string[]>([]);
   const navigate = useNavigate();
 
@@ -41,26 +38,7 @@ export function Preferences() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-heading text-text-primary text-lg font-semibold">Theme</h2>
-        <div className="grid grid-cols-5 gap-3">
-          {THEMES.map((t) => (
-            <motion.button
-              key={t.id}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setThemeId(t.id)}
-              aria-label={t.name}
-              title={t.name}
-              className={`aspect-square rounded-xl flex items-center justify-center border-2 transition-colors ${
-                themeId === t.id ? "border-accent" : "border-transparent"
-              }`}
-              style={{ background: t.colors.bg }}
-            >
-              <span
-                className="w-1/2 h-1/2 rounded-full"
-                style={{ background: t.colors.accent }}
-              />
-            </motion.button>
-          ))}
-        </div>
+        <ThemePicker />
       </section>
 
       <section className="flex flex-col gap-3">

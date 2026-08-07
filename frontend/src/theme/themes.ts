@@ -15,8 +15,8 @@ export interface Theme {
 
 export const THEMES: Theme[] = [
   {
-    id: "default",
-    name: "Orange & Black",
+    id: "dark",
+    name: "Dark",
     colors: {
       bg: "#121212",
       surface: "#201C1A",
@@ -27,44 +27,8 @@ export const THEMES: Theme[] = [
     },
   },
   {
-    id: "indigo",
-    name: "Muted Indigo",
-    colors: {
-      bg: "#14161F",
-      surface: "#1E212C",
-      textPrimary: "#E7E9F0",
-      textSecondary: "#8C90A3",
-      accent: "#5B63A8",
-      accentContrast: "#FFFFFF",
-    },
-  },
-  {
-    id: "charcoal",
-    name: "Charcoal & Electric Blue",
-    colors: {
-      bg: "#16181C",
-      surface: "#202329",
-      textPrimary: "#EDEEF0",
-      textSecondary: "#8C9099",
-      accent: "#4F8FF0",
-      accentContrast: "#FFFFFF",
-    },
-  },
-  {
-    id: "plum",
-    name: "Deep Plum & Rose",
-    colors: {
-      bg: "#201621",
-      surface: "#2B1E2C",
-      textPrimary: "#F2E9EC",
-      textSecondary: "#A08C9E",
-      accent: "#D9899E",
-      accentContrast: "#2B1E2C",
-    },
-  },
-  {
-    id: "cream",
-    name: "Warm Cream & Forest",
+    id: "light",
+    name: "Light",
     colors: {
       bg: "#F7F3E9",
       surface: "#FFFFFF",
@@ -76,5 +40,5 @@ export const THEMES: Theme[] = [
   },
 ];
 
-export const DEFAULT_THEME_ID = "default";
-export const DEFAULT_LIGHT_THEME_ID = "cream";
+export const DEFAULT_THEME_ID = "dark";
+export const DEFAULT_LIGHT_THEME_ID = "light";

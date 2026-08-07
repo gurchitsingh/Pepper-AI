@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* Theme 1 (default): Orange + Black */
+/* Dark mode (default): Orange + Black */
 :root {
   --bg: #121212;
   --surface: #201c1a;
@@ -10,38 +10,8 @@
   --accent-contrast: #171310;
 }
 
-/* Theme 2: Muted indigo */
-[data-theme="indigo"] {
-  --bg: #14161f;
-  --surface: #1e212c;
-  --text-primary: #e7e9f0;
-  --text-secondary: #8c90a3;
-  --accent: #5b63a8;
-  --accent-contrast: #ffffff;
-}
-
-/* Theme 3: Charcoal + electric blue */
-[data-theme="charcoal"] {
-  --bg: #16181c;
-  --surface: #202329;
-  --text-primary: #edeef0;
-  --text-secondary: #8c9099;
-  --accent: #4f8ff0;
-  --accent-contrast: #ffffff;
-}
-
-/* Theme 4: Deep plum + rose-pink */
-[data-theme="plum"] {
-  --bg: #201621;
-  --surface: #2b1e2c;
-  --text-primary: #f2e9ec;
-  --text-secondary: #a08c9e;
-  --accent: #d9899e;
-  --accent-contrast: #2b1e2c;
-}
-
-/* Theme 5: Warm cream + forest green (light) */
-[data-theme="cream"] {
+/* Light mode: Warm cream + forest green */
+[data-theme="light"] {
   --bg: #f7f3e9;
   --surface: #ffffff;
   --text-primary: #1e2a1e;
