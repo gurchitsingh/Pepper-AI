@@ -3,14 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { LogOut } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
-import { useTheme } from "../theme/ThemeContext";
-import { THEMES } from "../theme/themes";
+import { ThemePicker } from "../components/ThemePicker";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { UserOut } from "../api/types";
 
 export function Settings() {
-  const { themeId, setThemeId } = useTheme();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [me, setMe] = useState<UserOut | null>(null);
@@ -35,23 +33,7 @@ export function Settings() {
 
       <section className="flex flex-col gap-3">
         <h3 className="font-heading text-text-primary text-lg font-semibold">Theme</h3>
-        <div className="grid grid-cols-5 gap-3">
-          {THEMES.map((t) => (
-            <motion.button
-              key={t.id}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => setThemeId(t.id)}
-              aria-label={t.name}
-              title={t.name}
-              className={`aspect-square rounded-xl flex items-center justify-center border-2 transition-colors ${
-                themeId === t.id ? "border-accent" : "border-transparent"
-              }`}
-              style={{ background: t.colors.bg }}
-            >
-              <span className="w-1/2 h-1/2 rounded-full" style={{ background: t.colors.accent }} />
-            </motion.button>
-          ))}
-        </div>
+        <ThemePicker />
       </section>
 
       <section className="flex flex-col gap-3">
