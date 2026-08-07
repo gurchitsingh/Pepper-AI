@@ -1,6 +1,6 @@
 import re
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
@@ -106,6 +106,33 @@ class ChatResponse(BaseModel):
     sources: list[ChatSource] = Field(default_factory=list)
     web_sources: list[WebSource] = Field(default_factory=list)
     answer_source: Literal["saved_content", "web_search"]
+
+
+class InsightsTypeBreakdown(BaseModel):
+    source_type: str
+    count: int
+
+
+class InsightsFolderBreakdown(BaseModel):
+    folder_id: uuid.UUID | None
+    folder_name: str
+    count: int
+
+
+class InsightsTrendPoint(BaseModel):
+    date: date
+    count: int
+
+
+class InsightsOut(BaseModel):
+    total_items: int
+    ready_items: int
+    processing_items: int
+    failed_items: int
+    by_type: list[InsightsTypeBreakdown]
+    by_folder: list[InsightsFolderBreakdown]
+    trend: list[InsightsTrendPoint]
+    first_saved_at: datetime | None
 
 
 class BillingStatusOut(BaseModel):

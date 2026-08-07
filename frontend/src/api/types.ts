@@ -44,3 +44,30 @@ export interface ChatResponse {
   answer: string;
   sources: ChatSource[];
 }
+
+export interface InsightsTypeBreakdown {
+  source_type: string;
+  count: number;
+}
+
+export interface InsightsFolderBreakdown {
+  folder_id: string | null;
+  folder_name: string;
+  count: number;
+}
+
+export interface InsightsTrendPoint {
+  date: string;
+  count: number;
+}
+
+export interface Insights {
+  total_items: number;
+  ready_items: number;
+  processing_items: number;
+  failed_items: number;
+  by_type: InsightsTypeBreakdown[];
+  by_folder: InsightsFolderBreakdown[];
+  trend: InsightsTrendPoint[];
+  first_saved_at: string | null;
+}

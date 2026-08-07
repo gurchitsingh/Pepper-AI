@@ -1,5 +1,5 @@
 import { apiFetch, apiFetchBlob } from "./client";
-import type { ChatResponse, Folder, SavedItem, Token, UserOut } from "./types";
+import type { ChatResponse, Folder, Insights, SavedItem, Token, UserOut } from "./types";
 
 export function signup(email: string, password: string, name?: string) {
   return apiFetch<Token>("/auth/signup", {
@@ -80,6 +80,10 @@ export function listFolders() {
 
 export function recomputeFolders() {
   return apiFetch<Folder[]>("/folders/recompute", { method: "POST" });
+}
+
+export function getInsights() {
+  return apiFetch<Insights>("/insights");
 }
 
 export function chat(question: string) {
