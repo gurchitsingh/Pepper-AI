@@ -59,10 +59,8 @@ export function Slides() {
   const [index, setIndex] = useState(0);
   const [direction, setDirection] = useState(1);
   const navigate = useNavigate();
-  const isLast = index === SLIDES.length - 1;
 
   useEffect(() => {
-    if (isLast) return;
     let timer: ReturnType<typeof setTimeout>;
     const schedule = () => {
       timer = setTimeout(() => {
@@ -73,26 +71,34 @@ export function Slides() {
           schedule();
           return;
         }
-        goTo(index + 1);
+        step(1);
       }, AUTO_ADVANCE_MS);
     };
     schedule();
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, isLast]);
+  }, [index]);
 
+  // Bounded jump, used by the dot navigation.
   function goTo(next: number) {
     if (next < 0 || next >= SLIDES.length) return;
     setDirection(next > index ? 1 : -1);
     setIndex(next);
   }
 
+  // Wrapping step, used by auto-advance and swipe so the slider loops
+  // continuously instead of stopping at either end.
+  function step(delta: number) {
+    setDirection(delta > 0 ? 1 : -1);
+    setIndex((prev) => (prev + delta + SLIDES.length) % SLIDES.length);
+  }
+
   function handleDragEnd(_e: unknown, info: PanInfo) {
     const swipe = swipePower(info.offset.x, info.velocity.x);
     if (swipe < -SWIPE_CONFIDENCE_THRESHOLD || info.offset.x < -SWIPE_DISTANCE_THRESHOLD) {
-      goTo(index + 1);
+      step(1);
     } else if (swipe > SWIPE_CONFIDENCE_THRESHOLD || info.offset.x > SWIPE_DISTANCE_THRESHOLD) {
-      goTo(index - 1);
+      step(-1);
     }
   }
 
