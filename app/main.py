@@ -5,7 +5,7 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 from app.database import engine
 from app.rate_limit import limiter
-from app.routers import auth, billing, chat, folders, saved_items
+from app.routers import auth, billing, chat, folders, insights, saved_items
 
 app = FastAPI()
 app.state.limiter = limiter
@@ -21,6 +21,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(saved_items.router)
 app.include_router(folders.router)
+app.include_router(insights.router)
 app.include_router(chat.router)
 app.include_router(billing.router)
 
