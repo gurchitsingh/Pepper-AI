@@ -44,3 +44,19 @@ export interface ChatResponse {
   answer: string;
   sources: ChatSource[];
 }
+
+export interface WebSource {
+  title: string | null;
+  url: string;
+  content: string | null;
+}
+
+export type ChatStreamEvent =
+  | { type: "chunk"; text: string }
+  | {
+      type: "done";
+      sources: ChatSource[];
+      web_sources: WebSource[];
+      answer_source: "saved_content" | "web_search";
+    }
+  | { type: "error"; detail: string };
