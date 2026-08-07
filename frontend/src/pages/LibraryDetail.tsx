@@ -91,12 +91,12 @@ export function LibraryDetail() {
       {!item && !error && <p className="text-text-secondary text-sm">Loading...</p>}
 
       {item && (
-        <div className="glass-card rounded-2xl p-6 flex flex-col gap-4">
+        <div className="bg-surface border border-text-secondary/15 rounded-2xl p-6 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-bg flex items-center justify-center shrink-0">
               <Icon size={18} className="text-accent" />
             </div>
-            <span className="text-[10px] text-text-secondary font-medium uppercase tracking-widest">
+            <span className="text-[11px] text-text-secondary font-semibold uppercase tracking-widest">
               {item.source_type}
             </span>
             {item.folder_name && (
@@ -107,7 +107,7 @@ export function LibraryDetail() {
             )}
           </div>
 
-          {item.title && <h2 className="font-heading text-text-primary text-2xl font-bold">{item.title}</h2>}
+          {item.title && <h2 className="font-heading text-text-primary text-2xl font-semibold">{item.title}</h2>}
 
           {item.source_url && (
             <a

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, Link2, Mic, FileImage, LayoutGrid, Folder as FolderIcon, RefreshCw, Rows3 } from "lucide-react";
+import { FileText, Link2, Mic, FileImage, Infinity as InfinityIcon, Folder as FolderIcon, RefreshCw, Rows3, Plus } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { Folder, SavedItem } from "../api/types";
@@ -9,7 +10,7 @@ import { SearchBar } from "../components/SearchBar";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 const FILTERS = [
-  { id: "all", label: "All", Icon: LayoutGrid, match: () => true },
+  { id: "all", label: "All", Icon: InfinityIcon, match: () => true },
   { id: "note", label: "Notes", Icon: FileText, match: (t: string) => t === "note" },
   { id: "link", label: "Links", Icon: Link2, match: (t: string) => t === "article" || t === "youtube" },
   { id: "voice", label: "Voice", Icon: Mic, match: (t: string) => t === "voice_note" },
@@ -97,51 +98,46 @@ export function Library() {
   }
 
   return (
-    <div className="max-w-[1200px] mx-auto px-6 flex flex-col gap-4">
+    <div className="max-w-[1200px] mx-auto px-6 flex flex-col gap-4 relative">
       <div className="flex items-center justify-between gap-2 mb-2">
         <h2 className="font-heading text-text-primary text-2xl font-bold">Library</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1">
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setGrouped((g) => !g)}
             title={grouped ? "Show flat list" : "Group by folder"}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs border bg-surface text-text-secondary border-text-secondary/20"
+            className="flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-accent transition-colors"
           >
-            {grouped ? <FolderIcon size={14} /> : <Rows3 size={14} />}
-            {grouped ? "Folders" : "Flat"}
+            {grouped ? <FolderIcon size={16} /> : <Rows3 size={16} />}
           </motion.button>
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={handleReorganize}
             disabled={reorganizing}
             title="Re-organize into folders now"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs border bg-surface text-text-secondary border-text-secondary/20 disabled:opacity-50"
+            className="flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-accent disabled:opacity-50 transition-colors"
           >
-            <RefreshCw size={14} className={reorganizing ? "animate-spin" : ""} />
-            {reorganizing ? "Organizing..." : "Re-organize"}
+            <RefreshCw size={16} className={reorganizing ? "animate-spin" : ""} />
           </motion.button>
         </div>
       </div>
 
-      <SearchBar value={query} onChange={setQuery} placeholder="Search titles, transcripts, and sources..." />
+      <SearchBar id="page-search" value={query} onChange={setQuery} placeholder="Search titles, transcripts, and sources..." />
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-6 overflow-x-auto pb-1 border-b border-text-secondary/10">
         {FILTERS.map(({ id, label, Icon }) => {
           const isActive = filter === id;
           return (
-            <motion.button
+            <button
               key={id}
-              whileTap={{ scale: 0.95 }}
               onClick={() => setFilter(id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm border shrink-0 transition-colors ${
-                isActive
-                  ? "bg-accent text-accent-contrast border-accent"
-                  : "bg-surface text-text-secondary border-text-secondary/20"
+              className={`flex flex-col items-center gap-1 pb-2.5 border-b-2 shrink-0 transition-colors ${
+                isActive ? "border-accent text-accent" : "border-transparent text-text-secondary hover:text-text-primary"
               }`}
             >
-              <Icon size={14} />
-              {label}
-            </motion.button>
+              <Icon size={18} strokeWidth={1.5} />
+              <span className="text-[11px] font-semibold uppercase tracking-wide">{label}</span>
+            </button>
           );
         })}
       </div>
@@ -192,6 +188,14 @@ export function Library() {
           </AnimatePresence>
         </motion.div>
       )}
+
+      <Link
+        to="/save"
+        aria-label="Save new content"
+        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-accent text-accent-contrast shadow-lg flex items-center justify-center z-40 hover:scale-105 active:scale-95 transition-transform"
+      >
+        <Plus size={26} />
+      </Link>
     </div>
   );
 }
