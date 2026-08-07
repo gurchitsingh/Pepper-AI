@@ -43,10 +43,13 @@ export function getSavedItemAudio(id: string) {
 
 export function createLinkItem(sourceUrl: string) {
   const isYoutube = /(?:youtube\.com|youtu\.be)/i.test(sourceUrl);
+  const isInstagram = /instagram\.com/i.test(sourceUrl);
+  const isTiktok = /tiktok\.com/i.test(sourceUrl);
+  const sourceType = isYoutube ? "youtube" : isInstagram ? "instagram" : isTiktok ? "tiktok" : "article";
   return apiFetch<SavedItem>("/saved-items", {
     method: "POST",
     body: JSON.stringify({
-      source_type: isYoutube ? "youtube" : "article",
+      source_type: sourceType,
       source_url: sourceUrl,
     }),
   });

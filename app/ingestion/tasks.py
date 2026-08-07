@@ -13,11 +13,21 @@ from app.models.models import Chunk, SavedItem, Transcript, TranscriptSegment
 
 logger = logging.getLogger(__name__)
 
+def _process_reel(item):
+    """Instagram/TikTok items arrive two ways: pasted as a link (source_url set,
+    downloaded via yt-dlp) or captured on-device via the upload endpoint
+    (uploaded_file_path set, already on disk).
+    """
+    if item.source_url:
+        return media.process_reel_url(item.source_url)
+    return media.process_uploaded_file(item.uploaded_file_path)
+
+
 HANDLERS = {
     "article": lambda item: article.process(item.source_url),
     "youtube": lambda item: youtube.process(item.source_url),
-    "instagram": lambda item: media.process_uploaded_file(item.uploaded_file_path),
-    "tiktok": lambda item: media.process_uploaded_file(item.uploaded_file_path),
+    "instagram": _process_reel,
+    "tiktok": _process_reel,
     "voice_note": lambda item: media.process_uploaded_file(item.uploaded_file_path),
     "document": lambda item: document.process_uploaded_document(item.uploaded_file_path),
 }

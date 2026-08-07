@@ -103,3 +103,33 @@ def process_uploaded_file(file_path: str) -> IngestResult:
         return transcribe_audio(audio_path)
     finally:
         os.remove(audio_path)
+
+
+def process_reel_url(url: str) -> IngestResult:
+    """Downloads a public Instagram/TikTok reel via yt-dlp, extracts its audio, and
+    transcribes it through the same Groq/faster-whisper path as any other audio source.
+    """
+    import yt_dlp
+
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        out_template = os.path.join(tmp_dir, "audio.%(ext)s")
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "outtmpl": out_template,
+            "quiet": True,
+            "no_warnings": True,
+            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav"}],
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=True)
+        except yt_dlp.utils.DownloadError as e:
+            raise IngestionError(f"Could not download this reel: {e}")
+
+        wav_path = os.path.join(tmp_dir, "audio.wav")
+        if not os.path.exists(wav_path):
+            raise IngestionError("Reel download: expected audio file was not produced")
+
+        result = transcribe_audio(wav_path)
+        result.title = result.title or (info or {}).get("title") or (info or {}).get("description")
+        return result
