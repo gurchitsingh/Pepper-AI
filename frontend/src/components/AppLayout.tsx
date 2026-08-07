@@ -4,7 +4,7 @@ import { BottomNav } from "./BottomNav";
 
 export function AppLayout() {
   return (
-    <div className="min-h-screen flex flex-col bg-bg">
+    <div className="min-h-dvh flex flex-col bg-bg">
       <header className="fixed top-0 w-full z-50 bg-bg/80 backdrop-blur-md">
         <div className="flex justify-between items-center px-6 h-16 w-full max-w-[1200px] mx-auto">
           <h1 className="font-heading text-accent text-2xl font-bold tracking-tight">Pepper</h1>
