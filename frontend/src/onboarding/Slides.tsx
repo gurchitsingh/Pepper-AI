@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import {
   MeetPepperIllustration,
   SaveAnythingIllustration,
@@ -131,7 +132,7 @@ export function Slides() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...TRANSITION, delay: 0.03 }}
-              className="font-heading text-text-primary text-3xl font-bold"
+              className="font-heading text-text-primary text-4xl font-semibold leading-tight"
             >
               {slide.title}
             </motion.h1>
@@ -161,13 +162,15 @@ export function Slides() {
         ))}
       </div>
 
-      <div className="px-8 pb-12">
+      <div className="px-8 pb-4 flex flex-col items-center gap-3">
         <button
           onClick={() => navigate("/signup")}
-          className="bg-accent text-accent-contrast font-medium h-12 w-full max-w-sm rounded-full mx-auto block"
+          className="bg-accent text-accent-contrast font-medium h-12 w-full max-w-sm rounded-full mx-auto flex items-center justify-center gap-2"
         >
           Get Started
+          <ArrowRight size={18} />
         </button>
+        <p className="text-text-secondary/70 text-xs pb-8">Intellectual calm for focused minds.</p>
       </div>
     </div>
   );

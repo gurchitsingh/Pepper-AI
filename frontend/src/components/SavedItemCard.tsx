@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { FileText, Link2, Mic, FileImage } from "lucide-react";
+import { FileText, Link2, Mic, FileImage, MoreVertical } from "lucide-react";
 import type { SavedItem } from "../api/types";
+import { relativeTime } from "../lib/format";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -13,11 +14,21 @@ const TYPE_ICON: Record<string, typeof FileText> = {
   tiktok: Link2,
 };
 
-const STATUS_COLOR: Record<SavedItem["status"], string> = {
-  ready: "text-success",
-  pending: "text-text-secondary",
-  processing: "text-accent",
-  failed: "text-error",
+const TYPE_LABEL: Record<string, string> = {
+  note: "Note",
+  article: "Link",
+  youtube: "Video",
+  voice_note: "Voice",
+  document: "Document",
+  instagram: "Link",
+  tiktok: "Link",
+};
+
+const STATUS_BADGE: Record<SavedItem["status"], string> = {
+  ready: "bg-success/15 text-success",
+  pending: "bg-text-secondary/15 text-text-secondary",
+  processing: "bg-accent/15 text-accent",
+  failed: "bg-error/15 text-error",
 };
 
 export function itemTitle(item: SavedItem): string {
@@ -30,6 +41,8 @@ export function itemTitle(item: SavedItem): string {
 
 export function SavedItemCard({ item }: { item: SavedItem }) {
   const Icon = TYPE_ICON[item.source_type] ?? FileText;
+  const typeLabel = TYPE_LABEL[item.source_type] ?? item.source_type;
+
   return (
     <motion.div
       layout
@@ -40,19 +53,42 @@ export function SavedItemCard({ item }: { item: SavedItem }) {
     >
       <Link
         to={`/library/${item.id}`}
-        className="glass-card rounded-2xl p-4 flex items-center gap-3 w-full text-left"
+        className="group bg-surface border border-text-secondary/15 rounded-xl overflow-hidden hover:border-accent/50 transition-colors flex flex-col p-4 gap-3 h-full"
       >
-        <div className="w-10 h-10 rounded-full bg-bg flex items-center justify-center shrink-0">
-          <Icon size={18} className="text-accent" />
-        </div>
-        <div className="min-w-0 flex-grow">
-          <span className="text-[10px] text-text-secondary font-medium uppercase tracking-widest">
-            {item.source_type}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-9 h-9 rounded-full bg-bg flex items-center justify-center shrink-0">
+              <Icon size={16} className="text-accent" />
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-text-secondary truncate">
+              {typeLabel}
+            </span>
+          </div>
+          <span
+            className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full shrink-0 ${STATUS_BADGE[item.status]}`}
+          >
+            {item.status}
           </span>
-          <h3 className="font-body text-text-primary font-medium truncate">{itemTitle(item)}</h3>
-          {item.failure_reason && <p className="text-error text-xs mt-1 truncate">{item.failure_reason}</p>}
         </div>
-        <span className={`text-sm font-medium shrink-0 ${STATUS_COLOR[item.status]}`}>{item.status}</span>
+
+        <h3 className="font-heading text-text-primary text-lg font-semibold leading-snug line-clamp-2">
+          {itemTitle(item)}
+        </h3>
+
+        {item.failure_reason ? (
+          <p className="text-error text-xs line-clamp-2">{item.failure_reason}</p>
+        ) : (
+          item.transcript && (
+            <p className="text-text-secondary text-sm line-clamp-2">{item.transcript}</p>
+          )
+        )}
+
+        <div className="flex items-center justify-between mt-auto pt-1">
+          <span className="text-text-secondary/70 text-xs">
+            {typeLabel} &bull; {relativeTime(item.created_at)}
+          </span>
+          <MoreVertical size={16} className="text-text-secondary/50 group-hover:text-accent transition-colors" />
+        </div>
       </Link>
     </motion.div>
   );

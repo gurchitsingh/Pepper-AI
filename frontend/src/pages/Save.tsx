@@ -1,8 +1,11 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Camera, ImagePlus, Mic, FileText, Link2, Square, X } from "lucide-react";
+import { Camera, Mic, NotebookPen, FileText, Link2, Square, X } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
+import type { SavedItem } from "../api/types";
+import { SavedItemCard } from "../components/SavedItemCard";
 
 type Feedback = { type: "success" | "error"; message: string };
 
@@ -42,11 +45,11 @@ function Modal({ title, onClose, children }: ModalProps) {
 }
 
 const ENTRY_POINTS = [
-  { id: "click-picture", label: "Take a Photo", desc: "Snap it with your camera", Icon: Camera },
-  { id: "add-picture", label: "Upload a Photo", desc: "Pick one from your library", Icon: ImagePlus },
-  { id: "voice", label: "Voice Note", desc: "Speak it — Pepper transcribes as you go", Icon: Mic },
-  { id: "note", label: "Quick Note", desc: "Jot it down before it slips away", Icon: FileText },
-  { id: "link", label: "Paste Link", desc: "Drop in an article, video, or post", Icon: Link2 },
+  { id: "click-picture", label: "Camera", desc: "Snap it with your camera", Icon: Camera },
+  { id: "voice", label: "Voice", desc: "Speak it — Pepper transcribes as you go", Icon: Mic },
+  { id: "note", label: "Notes", desc: "Jot it down before it slips away", Icon: NotebookPen },
+  { id: "link", label: "Links", desc: "Drop in an article, video, or post", Icon: Link2 },
+  { id: "add-picture", label: "Document", desc: "Upload a file from your device", Icon: FileText },
 ] as const;
 
 type EntryId = (typeof ENTRY_POINTS)[number]["id"];
@@ -56,6 +59,7 @@ export function Save() {
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [recording, setRecording] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [recentItems, setRecentItems] = useState<SavedItem[]>([]);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -65,6 +69,13 @@ export function Save() {
   const [noteContent, setNoteContent] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    api
+      .listSavedItems()
+      .then((items) => setRecentItems(items.slice(0, 2)))
+      .catch(() => {});
+  }, []);
 
   function showFeedback(f: Feedback) {
     setFeedback(f);
@@ -168,8 +179,11 @@ export function Save() {
   }
 
   return (
-    <div className="max-w-[600px] mx-auto px-6 flex flex-col gap-4">
-      <h2 className="font-heading text-text-primary text-2xl font-bold mb-2">Save something</h2>
+    <div className="max-w-[600px] mx-auto px-6 flex flex-col gap-6">
+      <div>
+        <h2 className="font-heading text-text-primary text-2xl font-bold">Save to Mind</h2>
+        <p className="text-text-secondary text-sm mt-1">Capture instant thoughts, sights, and sounds.</p>
+      </div>
 
       <input
         ref={cameraInputRef}
@@ -182,7 +196,7 @@ export function Save() {
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,.pdf,.doc,.docx,.txt"
         className="hidden"
         onChange={handlePictureChange}
       />
@@ -201,33 +215,48 @@ export function Save() {
       </AnimatePresence>
 
       <div className="grid grid-cols-2 gap-4">
-        {ENTRY_POINTS.map(({ id, label, desc, Icon }) => {
+        {ENTRY_POINTS.map(({ id, label, desc, Icon }, index) => {
           const isRecording = id === "voice" && recording;
+          const isLast = index === ENTRY_POINTS.length - 1;
           return (
             <motion.button
               key={id}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleTileTap(id)}
               disabled={uploading}
-              className={`glass-card rounded-2xl flex flex-col items-center justify-center p-6 min-h-[160px] text-center transition-colors disabled:opacity-50 ${
-                isRecording ? "ring-2 ring-accent" : ""
-              }`}
+              title={desc}
+              className={`bg-surface border rounded-2xl flex flex-col items-center justify-center p-6 min-h-[140px] text-center transition-colors disabled:opacity-50 ${
+                isRecording ? "border-accent ring-2 ring-accent" : "border-text-secondary/15 hover:border-accent/40"
+              } ${isLast ? "col-span-2" : ""}`}
             >
-              <div className="w-12 h-12 rounded-full bg-bg flex items-center justify-center mb-3">
-                {isRecording ? (
-                  <Square size={20} className="text-accent" fill="currentColor" />
-                ) : (
-                  <Icon size={22} className="text-accent" />
-                )}
-              </div>
-              <h3 className="font-body text-text-primary font-medium">
+              {isRecording ? (
+                <Square size={22} className="text-accent mb-2" fill="currentColor" />
+              ) : (
+                <Icon size={22} className="text-accent mb-2" strokeWidth={1.5} />
+              )}
+              <h3 className="font-body text-text-primary text-sm font-semibold uppercase tracking-wide">
                 {isRecording ? "Recording... tap to stop" : label}
               </h3>
-              <p className="font-body text-text-secondary text-xs mt-1">{desc}</p>
             </motion.button>
           );
         })}
       </div>
+
+      {recentItems.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h3 className="font-heading text-text-primary text-lg font-semibold">Recent Captures</h3>
+            <Link to="/library" className="text-accent text-sm hover:underline">
+              View All
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {recentItems.map((item) => (
+              <SavedItemCard key={item.id} item={item} />
+            ))}
+          </div>
+        </div>
+      )}
 
       <AnimatePresence>
         {openModal === "note" && (

@@ -16,7 +16,7 @@ import { Library } from "./pages/Library";
 import { LibraryDetail } from "./pages/LibraryDetail";
 import { Chatbot } from "./pages/Chatbot";
 import { Settings } from "./pages/Settings";
-import { Stub } from "./pages/Stub";
+import { Insights } from "./pages/Insights";
 
 function RequireAuth({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -70,7 +70,7 @@ function App() {
                 <Route path="/save" element={<Save />} />
                 <Route path="/library" element={<Library />} />
                 <Route path="/library/:id" element={<LibraryDetail />} />
-                <Route path="/insights" element={<Stub title="Insights" />} />
+                <Route path="/insights" element={<Insights />} />
                 <Route path="/chat" element={<Chatbot />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>

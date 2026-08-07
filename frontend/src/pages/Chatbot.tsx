@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Send, FileText, Link2, Mic, FileImage, RotateCcw, ChevronDown } from "lucide-react";
+import { Send, FileText, Link2, Mic, FileImage, Plus, ChevronDown } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { ChatSource, SavedItem } from "../api/types";
@@ -29,10 +29,12 @@ function SourceCard({ source }: { source: ChatSource }) {
       layout
       whileTap={{ scale: 0.97 }}
       onClick={() => setExpanded((e) => !e)}
-      className="glass-card rounded-xl p-3 text-left w-full flex flex-col gap-1"
+      className="bg-surface border border-text-secondary/15 hover:border-accent/40 rounded-xl p-3 text-left w-full flex flex-col gap-1 transition-colors"
     >
       <div className="flex items-center gap-2">
-        <Icon size={14} className="text-accent shrink-0" />
+        <span className="w-7 h-7 rounded-full bg-bg flex items-center justify-center shrink-0">
+          <Icon size={13} className="text-accent" />
+        </span>
         <span className="text-text-primary text-sm font-medium truncate">
           {source.title || `${source.source_type} item`}
         </span>
@@ -170,10 +172,10 @@ export function Chatbot() {
           type="button"
           onClick={newSession}
           disabled={messages.length === 0 && !loading}
-          className="flex items-center gap-1.5 text-text-secondary text-sm px-3 py-1.5 rounded-full hover:bg-surface disabled:opacity-40 transition-colors"
+          className="flex items-center gap-1 text-text-primary text-sm font-medium px-3.5 py-1.5 rounded-full border border-text-secondary/20 hover:border-accent hover:text-accent disabled:opacity-40 transition-colors"
         >
-          <RotateCcw size={14} />
-          New Session
+          <Plus size={14} />
+          New Chat
         </button>
       </div>
 
@@ -200,9 +202,11 @@ export function Chatbot() {
                 className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`rounded-2xl px-4 py-3 max-w-[85%] ${
-                    m.role === "user" ? "bg-accent text-accent-contrast" : "glass-card text-text-primary"
-                  }`}
+                  className={
+                    m.role === "user"
+                      ? "rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast"
+                      : "max-w-[95%] text-text-primary font-body leading-relaxed"
+                  }
                 >
                   {m.content}
                 </div>
