@@ -7,6 +7,7 @@ import type { ChatSource, SavedItem } from "../api/types";
 import { useChat, type Message } from "../chat/ChatContext";
 import { detectSmallTalk, timeOfDayGreeting } from "../chat/smallTalk";
 import { suggestedQuestions } from "../chat/suggestedQuestions";
+import { ThinkingIndicator } from "../components/ThinkingIndicator";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -217,15 +218,19 @@ export function Chatbot() {
             ))}
           </AnimatePresence>
 
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card rounded-2xl px-4 py-3 text-text-secondary text-sm w-fit"
-            >
-              Thinking...
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {loading && (
+              <motion.div
+                key="thinking"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
+                transition={{ duration: 0.25 }}
+              >
+                <ThinkingIndicator />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         <AnimatePresence>
