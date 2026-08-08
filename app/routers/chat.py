@@ -1,3 +1,4 @@
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -11,11 +12,13 @@ from app.auth import get_current_user
 from app.database import get_db
 from app.embeddings import EmbeddingError, embed_texts
 from app.retrieval import search_chunks
-from app.schemas import ChatRequest, ChatResponse, ChatSource, WebSource
-from app.models.models import User
+from app.schemas import ChatRequest, ChatResponse, ChatSource, SuggestedQuestionsOut, WebSource
+from app.models.models import Chunk, SavedItem, User
 from app.web_search import WebSearchError, web_search
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"])
 
@@ -25,6 +28,25 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 GEMINI_MODEL = "gemini-flash-latest"
 TOP_K = 5
 WEB_TOP_K = 5
+
+# How many of the user's most-recently-ready items to consider as suggestion
+# material, and how many candidate questions to ask Gemini for. We generate
+# more than the UI shows at once (see suggestedQuestionsFromContent on the
+# frontend) so it can rotate/exclude already-asked ones without refetching.
+MAX_SUGGESTION_ITEMS = 12
+SUGGESTION_COUNT = 8
+MAX_SNIPPET_CHARS = 600
+
+SUGGESTIONS_PROMPT = (
+    "Below are excerpts from things a user has saved (notes, articles, videos, voice "
+    "memos, documents). Write {count} short questions the user might genuinely want to "
+    "ask about this content. Each question must be specific -- reference an actual "
+    "topic, fact, name, or detail that appears in one of the excerpts, not a generic "
+    "question like 'What is this about?' or 'What did I save?'. Each question should be "
+    "answerable using only the excerpt it's based on. Keep each question under 15 words. "
+    "Return exactly {count} questions, covering a mix of the different excerpts rather "
+    "than repeatedly asking about the same one."
+)
 
 # Sentinel the model returns when saved-content excerpts can't answer the question,
 # so the endpoint can fall back to a live web search instead of parsing prose.
@@ -136,3 +158,83 @@ def chat(
         return _answer_from_web(client, payload.question)
 
     return ChatResponse(answer=answer, sources=sources, answer_source="saved_content")
+
+
+def _content_snippets(db: Session, items: list[SavedItem]) -> dict:
+    """Representative body text per item, built from actual chunk content (not
+    just the title) so suggestion questions can reference real topics/facts.
+    Concatenates chunks in order up to a char budget rather than just the
+    first one, since an opening chunk (e.g. a video's first few seconds) is
+    often less informative than the piece as a whole."""
+    item_ids = [item.id for item in items]
+    chunks = (
+        db.query(Chunk)
+        .filter(Chunk.saved_item_id.in_(item_ids))
+        .order_by(Chunk.saved_item_id, Chunk.chunk_index)
+        .all()
+    )
+    chunks_by_item: dict = {}
+    for c in chunks:
+        chunks_by_item.setdefault(c.saved_item_id, []).append(c)
+
+    snippets = {}
+    for item in items:
+        parts = []
+        total = 0
+        for c in chunks_by_item.get(item.id, []):
+            text = c.text.strip()
+            if not text:
+                continue
+            parts.append(text)
+            total += len(text)
+            if total >= MAX_SNIPPET_CHARS:
+                break
+        snippet = " ".join(parts)[:MAX_SNIPPET_CHARS]
+        snippets[item.id] = snippet or (item.title or f"{item.source_type} item")
+    return snippets
+
+
+@router.get("/chat/suggested-questions", response_model=SuggestedQuestionsOut)
+def get_suggested_questions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Content-grounded chat suggestions: pulls real excerpts from the user's
+    saved items and asks Gemini for specific questions those excerpts can
+    answer, rather than the generic title-template questions the frontend
+    falls back to. Returns an empty list (never an error) whenever this isn't
+    possible -- no key, no ready items, or a Gemini failure -- so the caller
+    can fall back to that title-based path."""
+    items = (
+        db.query(SavedItem)
+        .filter(SavedItem.user_id == current_user.id, SavedItem.status == "ready")
+        .order_by(SavedItem.created_at.desc())
+        .limit(MAX_SUGGESTION_ITEMS)
+        .all()
+    )
+    if not items or not GOOGLE_API_KEY:
+        return SuggestedQuestionsOut(questions=[])
+
+    snippets = _content_snippets(db, items)
+    sections = []
+    for item in items:
+        label = item.title or f"{item.source_type} item"
+        sections.append(f"[{label}]\n{snippets[item.id]}")
+    prompt = SUGGESTIONS_PROMPT.format(count=SUGGESTION_COUNT) + "\n\n" + "\n\n".join(sections)
+
+    try:
+        client = genai.Client(api_key=GOOGLE_API_KEY)
+        response = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=SuggestedQuestionsOut,
+            ),
+        )
+        parsed: SuggestedQuestionsOut = response.parsed
+        questions = [q.strip() for q in parsed.questions if q.strip()][:SUGGESTION_COUNT]
+        return SuggestedQuestionsOut(questions=questions)
+    except Exception as e:
+        logger.warning("Suggested-question generation via Gemini failed, falling back: %s", e)
+        return SuggestedQuestionsOut(questions=[])

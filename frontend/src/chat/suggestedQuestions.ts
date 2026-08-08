@@ -50,3 +50,21 @@ export function suggestedQuestions(items: SavedItem[], messages: Message[], coun
   const rotated = [...candidates.slice(offset), ...candidates.slice(0, offset)];
   return rotated.slice(0, count).map((c) => c.question);
 }
+
+/** Same rotate-and-avoid-repeats behavior as suggestedQuestions above, but
+ * over a flat list of already-generated question strings (e.g. the
+ * content-grounded questions the backend generates from actual saved-item
+ * text) rather than title templates. */
+export function suggestedQuestionsFromContent(questions: string[], messages: Message[], count = 4): string[] {
+  const askedText = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content.toLowerCase())
+    .join(" \n ");
+
+  const candidates = questions.filter((q) => q.trim() && !askedText.includes(q.toLowerCase()));
+  if (candidates.length === 0) return [];
+
+  const offset = messages.length % candidates.length;
+  const rotated = [...candidates.slice(offset), ...candidates.slice(0, offset)];
+  return rotated.slice(0, count);
+}

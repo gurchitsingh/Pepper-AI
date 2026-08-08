@@ -45,6 +45,10 @@ export interface ChatResponse {
   sources: ChatSource[];
 }
 
+export interface SuggestedQuestionsOut {
+  questions: string[];
+}
+
 export interface InsightsTypeBreakdown {
   source_type: string;
   count: number;

@@ -1,5 +1,5 @@
 import { apiFetch, apiFetchBlob } from "./client";
-import type { ChatResponse, Folder, Insights, SavedItem, Token, UserOut } from "./types";
+import type { ChatResponse, Folder, Insights, SavedItem, SuggestedQuestionsOut, Token, UserOut } from "./types";
 
 export function signup(email: string, password: string, name?: string) {
   return apiFetch<Token>("/auth/signup", {
@@ -101,4 +101,8 @@ export function chat(question: string) {
     method: "POST",
     body: JSON.stringify({ question }),
   });
+}
+
+export function getSuggestedQuestions() {
+  return apiFetch<SuggestedQuestionsOut>("/chat/suggested-questions");
 }
