@@ -11,14 +11,18 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.billing import check_usage_allowed
 from app.database import get_db
+from app.embeddings import EmbeddingError, embed_texts
 from app.folders import enqueue_recompute_folders
 from app.ingestion.tasks import process_saved_item, store_chunks
 from app.models.models import Chunk, Folder, SavedItem, Transcript, TranscriptSegment, User
 from app.queue import ingestion_queue
+from app.retrieval import search_chunks
 from app.schemas import SavedItemCreate, SavedItemOut, SavedItemUpdate, SegmentOut
 from app.titles import generate_title
 
 router = APIRouter(prefix="/saved-items", tags=["saved-items"])
+
+SEMANTIC_SEARCH_TOP_K = 20
 
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
 UPLOAD_SOURCE_TYPES = {"instagram", "tiktok", "voice_note", "document"}
@@ -167,8 +171,27 @@ def search_saved_items(
     if not query:
         return []
 
+    # Rank by semantic similarity first (nearest chunk embeddings, deduped to
+    # one entry per saved item), then append any keyword-only matches --
+    # exact title/source-type hits that a wording-based query might not
+    # embed close to -- that semantic search missed. Falls back to pure
+    # keyword search if embeddings aren't configured/available.
+    ranked_ids: list[uuid.UUID] = []
+    seen: set[uuid.UUID] = set()
+
+    try:
+        [query_vector] = embed_texts([query], input_type="query")
+    except EmbeddingError:
+        query_vector = None
+
+    if query_vector is not None:
+        for _chunk, item in search_chunks(db, query_vector, user_id=current_user.id, top_k=SEMANTIC_SEARCH_TOP_K):
+            if item.id not in seen:
+                seen.add(item.id)
+                ranked_ids.append(item.id)
+
     pattern = f"%{query}%"
-    items = (
+    keyword_items = (
         db.query(SavedItem)
         .outerjoin(Transcript, Transcript.saved_item_id == SavedItem.id)
         .filter(
@@ -183,12 +206,23 @@ def search_saved_items(
         .distinct()
         .all()
     )
+    for item in keyword_items:
+        if item.id not in seen:
+            seen.add(item.id)
+            ranked_ids.append(item.id)
 
-    item_ids = [item.id for item in items]
-    transcripts = db.query(Transcript).filter(Transcript.saved_item_id.in_(item_ids)).all()
+    if not ranked_ids:
+        return []
+
+    items_by_id = {item.id: item for item in db.query(SavedItem).filter(SavedItem.id.in_(ranked_ids)).all()}
+    transcripts = db.query(Transcript).filter(Transcript.saved_item_id.in_(ranked_ids)).all()
     transcript_by_item = {t.saved_item_id: t.raw_text for t in transcripts}
 
-    return [_to_out(item, transcript_by_item.get(item.id)) for item in items]
+    return [
+        _to_out(items_by_id[item_id], transcript_by_item.get(item_id))
+        for item_id in ranked_ids
+        if item_id in items_by_id
+    ]
 
 
 @router.get("/{item_id}", response_model=SavedItemOut)

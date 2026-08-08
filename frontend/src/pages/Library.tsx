@@ -6,7 +6,7 @@ import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { Folder, SavedItem } from "../api/types";
 import { SavedItemCard } from "../components/SavedItemCard";
-import { SearchBar } from "../components/SearchBar";
+import { ExpandableSearch } from "../components/ExpandableSearch";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 const FILTERS = [
@@ -122,7 +122,9 @@ export function Library() {
         </div>
       </div>
 
-      <SearchBar id="page-search" value={query} onChange={setQuery} placeholder="Search titles, transcripts, and sources..." />
+      <div className="flex justify-end">
+        <ExpandableSearch value={query} onChange={setQuery} placeholder="Search titles, transcripts, and sources..." />
+      </div>
 
       <div className="flex gap-6 overflow-x-auto pb-1 border-b border-text-secondary/10">
         {FILTERS.map(({ id, label, Icon }) => {
