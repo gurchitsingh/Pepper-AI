@@ -10,6 +10,7 @@ from app.ingestion import article, document, media, youtube
 from app.ingestion.chunking import chunk_segments, chunk_text
 from app.ingestion.common import IngestionError
 from app.models.models import Chunk, SavedItem, Transcript, TranscriptSegment
+from app.titles import generate_title
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +125,8 @@ def process_saved_item(saved_item_id: str) -> None:
 
         if result.title:
             item.title = result.title
+        else:
+            item.title = generate_title(result.raw_text)
         if result.segments:
             # last segment's end time as a duration proxy -- avoids a second ffprobe
             # call since Whisper/YouTube segments are already computed above.

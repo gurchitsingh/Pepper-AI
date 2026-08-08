@@ -16,6 +16,7 @@ from app.ingestion.tasks import process_saved_item, store_chunks
 from app.models.models import Chunk, Folder, SavedItem, Transcript, TranscriptSegment, User
 from app.queue import ingestion_queue
 from app.schemas import SavedItemCreate, SavedItemOut, SegmentOut
+from app.titles import generate_title
 
 router = APIRouter(prefix="/saved-items", tags=["saved-items"])
 
@@ -78,6 +79,8 @@ def create_saved_item(
         db.flush()
         db.add(Transcript(saved_item_id=item.id, raw_text=payload.content))
         store_chunks(db, item, payload.content, segments=[], content_type="note")
+        if item.title is None:
+            item.title = generate_title(payload.content)
         db.commit()
         db.refresh(item)
         enqueue_recompute_folders(current_user.id)
