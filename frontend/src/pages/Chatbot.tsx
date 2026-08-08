@@ -8,6 +8,7 @@ import { useChat, type Message } from "../chat/ChatContext";
 import { detectSmallTalk, timeOfDayGreeting } from "../chat/smallTalk";
 import { suggestedQuestions } from "../chat/suggestedQuestions";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
+import { MarkdownMessage } from "../components/MarkdownMessage";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -202,15 +203,13 @@ export function Chatbot() {
                 transition={{ duration: 0.25 }}
                 className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
               >
-                <div
-                  className={
-                    m.role === "user"
-                      ? "rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast"
-                      : "max-w-[95%] text-text-primary font-body leading-relaxed"
-                  }
-                >
-                  {m.content}
-                </div>
+                {m.role === "user" ? (
+                  <div className="rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast">
+                    {m.content}
+                  </div>
+                ) : (
+                  <MarkdownMessage content={m.content} />
+                )}
                 {m.sources && m.sources.length > 0 && (
                   <div className="flex flex-col gap-2 max-w-[85%] w-full">
                     {m.sources.map((s, i) => (
