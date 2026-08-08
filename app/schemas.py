@@ -49,6 +49,11 @@ class SavedItemCreate(BaseModel):
     title: str | None = None  # optional, only used when source_type == "note"
 
 
+class SavedItemUpdate(BaseModel):
+    title: str | None = None
+    content: str | None = None  # only allowed when the item's source_type == "note"
+
+
 class SavedItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

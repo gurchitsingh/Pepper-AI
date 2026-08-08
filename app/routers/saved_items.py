@@ -15,7 +15,7 @@ from app.folders import enqueue_recompute_folders
 from app.ingestion.tasks import process_saved_item, store_chunks
 from app.models.models import Chunk, Folder, SavedItem, Transcript, TranscriptSegment, User
 from app.queue import ingestion_queue
-from app.schemas import SavedItemCreate, SavedItemOut, SegmentOut
+from app.schemas import SavedItemCreate, SavedItemOut, SavedItemUpdate, SegmentOut
 from app.titles import generate_title
 
 router = APIRouter(prefix="/saved-items", tags=["saved-items"])
@@ -203,6 +203,58 @@ def get_saved_item(
     if item.folder_id is not None:
         folder = db.get(Folder, item.folder_id)
         folder_name = folder.name if folder else None
+    return _to_out(item, transcript.raw_text if transcript else None, folder_name)
+
+
+@router.patch("/{item_id}", response_model=SavedItemOut)
+def update_saved_item(
+    item_id: uuid.UUID,
+    payload: SavedItemUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = _fetch_owned_item(db, item_id, current_user)
+    fields = payload.model_dump(exclude_unset=True)
+
+    if "content" in fields and item.source_type != "note":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only notes support editing content",
+        )
+
+    if "title" in fields:
+        title = fields["title"].strip() if fields["title"] and fields["title"].strip() else None
+        item.title = title
+
+    transcript = db.query(Transcript).filter(Transcript.saved_item_id == item.id).first()
+
+    if "content" in fields:
+        content = (fields["content"] or "").strip()
+        if not content:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="content cannot be empty")
+
+        if transcript is None:
+            transcript = Transcript(saved_item_id=item.id, raw_text=content)
+            db.add(transcript)
+        else:
+            transcript.raw_text = content
+
+        db.query(Chunk).filter(Chunk.saved_item_id == item.id).delete(synchronize_session=False)
+        db.flush()
+        store_chunks(db, item, content, segments=[], content_type="note")
+
+    db.commit()
+    db.refresh(item)
+
+    transcript = db.query(Transcript).filter(Transcript.saved_item_id == item.id).first()
+    folder_name = None
+    if item.folder_id is not None:
+        folder = db.get(Folder, item.folder_id)
+        folder_name = folder.name if folder else None
+
+    if "content" in fields:
+        enqueue_recompute_folders(current_user.id)
+
     return _to_out(item, transcript.raw_text if transcript else None, folder_name)
 
 
