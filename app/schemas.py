@@ -40,6 +40,7 @@ class UserOut(BaseModel):
     email: str
     name: str | None
     plan: str
+    has_avatar: bool
 
 
 class SavedItemCreate(BaseModel):

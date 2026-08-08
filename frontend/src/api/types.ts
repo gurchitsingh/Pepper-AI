@@ -29,6 +29,7 @@ export interface UserOut {
   email: string;
   name: string | null;
   plan: string;
+  has_avatar: boolean;
 }
 
 export interface ChatSource {

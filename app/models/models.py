@@ -22,6 +22,7 @@ class User(Base):
     oauth_provider = Column(String, nullable=True)
     oauth_provider_id = Column(String, nullable=True)
     plan = Column(String, nullable=False, default="free", server_default="free")
+    avatar_path = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     __table_args__ = (
@@ -32,6 +33,10 @@ class User(Base):
             unique=True,
         ),
     )
+
+    @property
+    def has_avatar(self) -> bool:
+        return self.avatar_path is not None
 
 
 class Folder(Base):

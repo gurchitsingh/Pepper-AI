@@ -26,6 +26,19 @@ export function getMe() {
   return apiFetch<UserOut>("/auth/me");
 }
 
+export function uploadAvatar(blob: Blob) {
+  const form = new FormData();
+  form.append("file", blob, "avatar.jpg");
+  return apiFetch<UserOut>("/auth/avatar", {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function getAvatar() {
+  return apiFetchBlob("/auth/avatar");
+}
+
 export function createNote(content: string, title?: string) {
   return apiFetch<SavedItem>("/saved-items", {
     method: "POST",
