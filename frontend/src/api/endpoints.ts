@@ -26,6 +26,13 @@ export function getMe() {
   return apiFetch<UserOut>("/auth/me");
 }
 
+export function updateMe(payload: { name?: string; email?: string }) {
+  return apiFetch<UserOut>("/auth/me", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function createNote(content: string, title?: string) {
   return apiFetch<SavedItem>("/saved-items", {
     method: "POST",

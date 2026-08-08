@@ -13,13 +13,34 @@ from app.auth import (
 from app.database import get_db
 from app.models.models import User
 from app.rate_limit import limiter
-from app.schemas import OAuthLogin, Token, UserLogin, UserOut, UserSignup
+from app.schemas import OAuthLogin, Token, UserLogin, UserOut, UserSignup, UserUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_me(
+    payload: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    updates = payload.model_dump(exclude_unset=True)
+
+    if "email" in updates and updates["email"] != current_user.email:
+        if db.query(User).filter(User.email == updates["email"], User.id != current_user.id).first():
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+        current_user.email = updates["email"]
+
+    if "name" in updates:
+        current_user.name = updates["name"]
+
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 

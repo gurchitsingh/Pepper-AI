@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, User, LogOut, Mail, Lock, Key, Download, Check } from "lucide-react";
+import { X, User, LogOut, Mail, Lock, Key, Download, Check, Pencil } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { THEMES } from "../theme/themes";
@@ -10,6 +10,11 @@ import { ApiError } from "../api/client";
 import type { UserOut } from "../api/types";
 
 const EYEBROW = "text-accent text-[11px] font-semibold uppercase tracking-widest";
+const FIELD_LABEL = "text-[11px] font-semibold uppercase tracking-widest text-text-secondary";
+const FIELD_INPUT =
+  "bg-transparent border border-text-secondary/25 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-colors";
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function Settings() {
   const { themeId, setThemeId } = useTheme();
@@ -19,6 +24,12 @@ export function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [emailDraft, setEmailDraft] = useState("");
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     api
@@ -30,6 +41,58 @@ export function Settings() {
   function showNotice(message: string) {
     setNotice(message);
     setTimeout(() => setNotice(null), 3000);
+  }
+
+  function startEditingProfile() {
+    if (!me) return;
+    setNameDraft(me.name ?? "");
+    setEmailDraft(me.email);
+    setProfileError(null);
+    setEditingProfile(true);
+  }
+
+  function cancelEditingProfile() {
+    setEditingProfile(false);
+    setProfileError(null);
+  }
+
+  async function handleSaveProfile(e: FormEvent) {
+    e.preventDefault();
+    if (!me) return;
+    setProfileError(null);
+
+    const trimmedName = nameDraft.trim();
+    const trimmedEmail = emailDraft.trim();
+
+    if (!trimmedName) {
+      setProfileError("Name cannot be blank");
+      return;
+    }
+    if (!EMAIL_PATTERN.test(trimmedEmail)) {
+      setProfileError("Enter a valid email address");
+      return;
+    }
+
+    const payload: { name?: string; email?: string } = {};
+    if (trimmedName !== (me.name ?? "")) payload.name = trimmedName;
+    if (trimmedEmail !== me.email) payload.email = trimmedEmail;
+
+    if (Object.keys(payload).length === 0) {
+      setEditingProfile(false);
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      const updated = await api.updateMe(payload);
+      setMe(updated);
+      setEditingProfile(false);
+      showNotice("Profile updated.");
+    } catch (err) {
+      setProfileError(err instanceof ApiError ? err.message : "Failed to update profile");
+    } finally {
+      setSavingProfile(false);
+    }
   }
 
   function handleConfirmLogout() {
@@ -93,17 +156,88 @@ export function Settings() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className={EYEBROW}>Account Management</h3>
+        <div className="flex items-center justify-between">
+          <h3 className={EYEBROW}>Account Management</h3>
+          {me && !editingProfile && (
+            <button
+              onClick={startEditingProfile}
+              className="flex items-center gap-1 text-accent text-xs font-semibold uppercase tracking-widest"
+            >
+              <Pencil size={12} />
+              Edit
+            </button>
+          )}
+        </div>
         {error && <p className="text-error text-sm">{error}</p>}
         {!me && !error && <p className="text-text-secondary text-sm">Loading...</p>}
-        {me && (
-          <div className="flex items-center gap-3 bg-surface border border-text-secondary/15 rounded-xl px-4 py-3.5">
-            <Mail size={18} className="text-text-secondary shrink-0" />
-            <div className="min-w-0">
-              <p className="text-text-secondary text-xs">Email Address</p>
-              <p className="text-text-primary text-sm truncate">{me.email}</p>
+
+        {me && !editingProfile && (
+          <div className="flex flex-col rounded-xl border border-text-secondary/15 bg-surface overflow-hidden">
+            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-text-secondary/10">
+              <User size={18} className="text-text-secondary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-text-secondary text-xs">Name</p>
+                <p className="text-text-primary text-sm truncate">{me.name || "Not set"}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <Mail size={18} className="text-text-secondary shrink-0" />
+              <div className="min-w-0">
+                <p className="text-text-secondary text-xs">Email Address</p>
+                <p className="text-text-primary text-sm truncate">{me.email}</p>
+              </div>
             </div>
           </div>
+        )}
+
+        {me && editingProfile && (
+          <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 bg-surface border border-text-secondary/15 rounded-xl p-4">
+            {profileError && <p className="text-error text-sm">{profileError}</p>}
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="settings-name" className={FIELD_LABEL}>
+                Name
+              </label>
+              <input
+                id="settings-name"
+                type="text"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                className={FIELD_INPUT}
+              />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="settings-email" className={FIELD_LABEL}>
+                Email address
+              </label>
+              <input
+                id="settings-email"
+                type="email"
+                value={emailDraft}
+                onChange={(e) => setEmailDraft(e.target.value)}
+                className={FIELD_INPUT}
+              />
+            </div>
+
+            <div className="flex gap-3 mt-1">
+              <button
+                type="button"
+                onClick={cancelEditingProfile}
+                disabled={savingProfile}
+                className="flex-grow h-11 rounded-full bg-transparent text-text-secondary border border-text-secondary/20 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={savingProfile}
+                className="flex-grow h-11 rounded-full bg-accent text-accent-contrast font-medium disabled:opacity-50"
+              >
+                {savingProfile ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </form>
         )}
       </section>
 
