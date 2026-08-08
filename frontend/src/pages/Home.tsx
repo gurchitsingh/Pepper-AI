@@ -7,7 +7,7 @@ import { ApiError } from "../api/client";
 import type { SavedItem } from "../api/types";
 import { computeStreak } from "./streak";
 import { SavedItemCard } from "../components/SavedItemCard";
-import { SearchBar } from "../components/SearchBar";
+import { ExpandableSearch } from "../components/ExpandableSearch";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 
 const listVariants = {
@@ -107,7 +107,9 @@ export function Home() {
 
   return (
     <div className="max-w-[600px] mx-auto px-6 flex flex-col gap-8">
-      <SearchBar id="page-search" value={query} onChange={setQuery} placeholder="Search your saves..." />
+      <div className="flex justify-end">
+        <ExpandableSearch value={query} onChange={setQuery} placeholder="Search your saves..." />
+      </div>
 
       {!isSearchMode && streak > 0 && (
         <div className="glass-card rounded-2xl px-4 py-3 flex items-center gap-2 w-fit">

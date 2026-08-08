@@ -8,6 +8,7 @@ import { useChat, type Message } from "../chat/ChatContext";
 import { detectSmallTalk, timeOfDayGreeting } from "../chat/smallTalk";
 import { suggestedQuestions } from "../chat/suggestedQuestions";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
+import { ExpandableSearch } from "../components/ExpandableSearch";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -61,6 +62,7 @@ export function Chatbot() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
+  const [messageQuery, setMessageQuery] = useState("");
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -111,6 +113,16 @@ export function Chatbot() {
   }, [messages, loading]);
 
   const suggestions = useMemo(() => suggestedQuestions(savedItems, messages), [savedItems, messages]);
+
+  // Client-side search over this conversation's own message history only --
+  // intentionally not routed through the saved-items search endpoint.
+  const trimmedMessageQuery = messageQuery.trim();
+  const isSearchMode = trimmedMessageQuery.length > 0;
+  const filteredMessages = useMemo(() => {
+    if (!trimmedMessageQuery) return [];
+    const q = trimmedMessageQuery.toLowerCase();
+    return messages.filter((m) => m.content.toLowerCase().includes(q));
+  }, [messages, trimmedMessageQuery]);
 
   function handleScroll() {
     if (autoScrollingRef.current) return;
@@ -180,65 +192,103 @@ export function Chatbot() {
         </button>
       </div>
 
+      <div className="flex justify-end">
+        <ExpandableSearch
+          value={messageQuery}
+          onChange={setMessageQuery}
+          placeholder="Search this conversation..."
+          ariaLabel="Search this conversation"
+        />
+      </div>
+
       <div className="relative flex-grow min-h-0">
         <div ref={scrollRef} onScroll={handleScroll} className="h-full overflow-y-auto flex flex-col gap-4 pb-2">
-          {messages.length === 0 && (
-            <div className="glass-card rounded-2xl p-5 flex flex-col gap-2">
-              <p className="font-heading text-text-primary text-lg font-semibold">
-                {timeOfDayGreeting()} I'm Pepper.
-              </p>
-              <p className="text-text-secondary text-sm">
-                Ask me anything about what you've saved, or just say hello — I'm around either way.
-              </p>
-            </div>
-          )}
-
-          <AnimatePresence initial={false}>
-            {messages.map((m) => (
-              <motion.div
-                key={m.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.25 }}
-                className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
-              >
-                <div
-                  className={
-                    m.role === "user"
-                      ? "rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast"
-                      : "max-w-[95%] text-text-primary font-body leading-relaxed"
-                  }
-                >
-                  {m.content}
-                </div>
-                {m.sources && m.sources.length > 0 && (
-                  <div className="flex flex-col gap-2 max-w-[85%] w-full">
-                    {m.sources.map((s, i) => (
-                      <SourceCard key={`${m.id}-${i}`} source={s} />
-                    ))}
+          {isSearchMode ? (
+            <>
+              <h3 className="font-heading text-text-primary text-sm font-semibold uppercase tracking-wide">
+                Search results
+              </h3>
+              {filteredMessages.length === 0 && (
+                <p className="text-text-secondary text-sm">No messages match &ldquo;{trimmedMessageQuery}&rdquo;.</p>
+              )}
+              {filteredMessages.map((m) => (
+                <div key={m.id} className={`flex flex-col gap-1 ${m.role === "user" ? "items-end" : "items-start"}`}>
+                  <span className="text-text-secondary text-xs uppercase tracking-wide">
+                    {m.role === "user" ? "You" : "Pepper"}
+                  </span>
+                  <div
+                    className={
+                      m.role === "user"
+                        ? "rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast"
+                        : "max-w-[95%] text-text-primary font-body leading-relaxed"
+                    }
+                  >
+                    {m.content}
                   </div>
-                )}
-              </motion.div>
-            ))}
-          </AnimatePresence>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              {messages.length === 0 && (
+                <div className="glass-card rounded-2xl p-5 flex flex-col gap-2">
+                  <p className="font-heading text-text-primary text-lg font-semibold">
+                    {timeOfDayGreeting()} I'm Pepper.
+                  </p>
+                  <p className="text-text-secondary text-sm">
+                    Ask me anything about what you've saved, or just say hello — I'm around either way.
+                  </p>
+                </div>
+              )}
 
-          <AnimatePresence>
-            {loading && (
-              <motion.div
-                key="thinking"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
-                transition={{ duration: 0.25 }}
-              >
-                <ThinkingIndicator />
-              </motion.div>
-            )}
-          </AnimatePresence>
+              <AnimatePresence initial={false}>
+                {messages.map((m) => (
+                  <motion.div
+                    key={m.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
+                  >
+                    <div
+                      className={
+                        m.role === "user"
+                          ? "rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast"
+                          : "max-w-[95%] text-text-primary font-body leading-relaxed"
+                      }
+                    >
+                      {m.content}
+                    </div>
+                    {m.sources && m.sources.length > 0 && (
+                      <div className="flex flex-col gap-2 max-w-[85%] w-full">
+                        {m.sources.map((s, i) => (
+                          <SourceCard key={`${m.id}-${i}`} source={s} />
+                        ))}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {loading && (
+                  <motion.div
+                    key="thinking"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
+                    transition={{ duration: 0.25 }}
+                  >
+                    <ThinkingIndicator />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
         </div>
 
         <AnimatePresence>
-          {showScrollButton && (
+          {!isSearchMode && showScrollButton && (
             <motion.button
               type="button"
               initial={{ opacity: 0, y: 8 }}
