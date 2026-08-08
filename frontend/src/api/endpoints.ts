@@ -1,5 +1,5 @@
-import { apiFetch, apiFetchBlob } from "./client";
-import type { ChatResponse, Folder, Insights, SavedItem, SuggestedQuestionsOut, Token, UserOut } from "./types";
+import { ApiError, apiFetch, apiFetchBlob, apiFetchSse } from "./client";
+import type { ChatResponse, ChatStreamEvent, Folder, Insights, SavedItem, SuggestedQuestionsOut, Token, UserOut } from "./types";
 
 export function signup(email: string, password: string, name?: string) {
   return apiFetch<Token>("/auth/signup", {
@@ -123,11 +123,23 @@ export function getInsights() {
   return apiFetch<Insights>("/insights");
 }
 
-export function chat(question: string) {
-  return apiFetch<ChatResponse>("/chat", {
+export async function chat(question: string, onChunk?: (text: string) => void): Promise<ChatResponse> {
+  let answer = "";
+  let sources: ChatResponse["sources"] = [];
+  await apiFetchSse<ChatStreamEvent>("/chat", {
     method: "POST",
     body: JSON.stringify({ question }),
+  }, (event) => {
+    if (event.type === "chunk") {
+      answer += event.text;
+      onChunk?.(event.text);
+    } else if (event.type === "done") {
+      sources = event.sources;
+    } else {
+      throw new ApiError(500, event.detail);
+    }
   });
+  return { answer, sources };
 }
 
 export function getSuggestedQuestions() {

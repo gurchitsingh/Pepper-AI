@@ -193,18 +193,23 @@ export function Chatbot() {
     }
 
     setLoading(true);
+    const replyId = crypto.randomUUID();
+    setMessages((prev) => [...prev, { id: replyId, role: "assistant", content: "" }]);
     try {
-      const res = await api.chat(q);
-      const replyId = crypto.randomUUID();
-      setMessages((prev) => [
-        ...prev,
-        { id: replyId, role: "assistant", content: res.answer, sources: res.sources },
-      ]);
+      const res = await api.chat(q, (chunk) => {
+        setMessages((prev) => prev.map((message) => (
+          message.id === replyId ? { ...message, content: message.content + chunk } : message
+        )));
+      });
+      setMessages((prev) => prev.map((message) => (
+        message.id === replyId ? { ...message, content: res.answer, sources: res.sources } : message
+      )));
       flashComplete(replyId);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Pepper couldn't answer that — try again.";
-      const replyId = crypto.randomUUID();
-      setMessages((prev) => [...prev, { id: replyId, role: "assistant", content: message }]);
+      setMessages((prev) => prev.map((chatMessage) => (
+        chatMessage.id === replyId ? { ...chatMessage, content: message } : chatMessage
+      )));
       flashComplete(replyId);
     } finally {
       setLoading(false);

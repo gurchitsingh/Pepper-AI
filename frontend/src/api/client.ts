@@ -48,6 +48,54 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
   return res.json();
 }
 
+export async function apiFetchSse<T>(
+  path: string,
+  options: RequestInit,
+  onEvent: (event: T) => void,
+): Promise<void> {
+  const token = getToken();
+  const headers = new Headers(options.headers);
+  headers.set("Content-Type", "application/json");
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      const body = await res.json();
+      detail = body.detail ?? JSON.stringify(body);
+    } catch {
+      // no JSON body
+    }
+    throw new ApiError(res.status, typeof detail === "string" ? detail : JSON.stringify(detail));
+  }
+  if (!res.body) throw new ApiError(res.status, "The chat response did not include a stream.");
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let pending = "";
+  const handleEvent = (rawEvent: string) => {
+    const data = rawEvent
+      .split("\n")
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n");
+    if (data) onEvent(JSON.parse(data) as T);
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    pending += decoder.decode(value, { stream: !done });
+    const events = pending.split("\n\n");
+    pending = events.pop() ?? "";
+    events.forEach(handleEvent);
+    if (done) break;
+  }
+  if (pending.trim()) handleEvent(pending);
+}
+
 export async function apiFetchBlob(path: string): Promise<Blob> {
   const token = getToken();
   const headers = new Headers();
