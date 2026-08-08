@@ -57,6 +57,18 @@ class UserOut(BaseModel):
     has_avatar: bool
 
 
+class UserUpdate(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+
+    @field_validator("name")
+    @classmethod
+    def name_not_blank(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("Name cannot be blank")
+        return value.strip() if value is not None else value
+
+
 class SavedItemCreate(BaseModel):
     source_type: str
     source_url: str | None = None
