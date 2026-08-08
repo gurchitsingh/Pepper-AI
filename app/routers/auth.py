@@ -13,7 +13,7 @@ from app.auth import (
 from app.database import get_db
 from app.models.models import User
 from app.rate_limit import limiter
-from app.schemas import OAuthLogin, Token, UserLogin, UserOut, UserSignup
+from app.schemas import OAuthLogin, PasswordChange, Token, UserLogin, UserOut, UserSignup
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -45,6 +45,21 @@ def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
 
     return Token(access_token=create_access_token(user.id))
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
+def change_password(
+    request: Request,
+    payload: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user.hashed_password or not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Current password is incorrect")
+
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()
 
 
 @router.post("/google", response_model=Token)

@@ -26,6 +26,13 @@ export function getMe() {
   return apiFetch<UserOut>("/auth/me");
 }
 
+export function changePassword(currentPassword: string, newPassword: string) {
+  return apiFetch<void>("/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
+}
+
 export function createNote(content: string, title?: string) {
   return apiFetch<SavedItem>("/saved-items", {
     method: "POST",
