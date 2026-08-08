@@ -8,6 +8,7 @@ import { Slides } from "./onboarding/Slides";
 import { Preferences } from "./onboarding/Preferences";
 import { ReferralSource } from "./onboarding/ReferralSource";
 import { AppLayout } from "./components/AppLayout";
+import { Landing } from "./pages/Landing";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
 import { Home } from "./pages/Home";
@@ -40,6 +41,7 @@ function App() {
         <ChatProvider>
           <BrowserRouter>
             <Routes>
+              <Route path="/welcome" element={<Landing />} />
               <Route path="/slides" element={<Slides />} />
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
