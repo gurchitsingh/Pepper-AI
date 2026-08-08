@@ -8,6 +8,7 @@ import { THEMES } from "../theme/themes";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { UserOut } from "../api/types";
+import { DURATION_ENTER, DURATION_EXIT, EASE_IN, EASE_OUT } from "../lib/motion";
 
 const EYEBROW = "text-accent text-[11px] font-semibold uppercase tracking-widest";
 
@@ -164,15 +165,15 @@ export function Settings() {
         {confirmingLogout && (
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: DURATION_ENTER, ease: EASE_OUT } }}
+            exit={{ opacity: 0, transition: { duration: DURATION_EXIT, ease: EASE_IN } }}
             className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center px-4"
             onClick={() => setConfirmingLogout(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1, transition: { duration: DURATION_ENTER, ease: EASE_OUT } }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: DURATION_EXIT, ease: EASE_IN } }}
               onClick={(e) => e.stopPropagation()}
               className="glass-card rounded-2xl p-6 w-full max-w-xs flex flex-col gap-4 text-center"
             >

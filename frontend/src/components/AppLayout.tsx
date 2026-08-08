@@ -1,8 +1,12 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { User } from "lucide-react";
 import { BottomNav } from "./BottomNav";
+import { DURATION_ENTER, DURATION_EXIT, EASE_IN, EASE_OUT } from "../lib/motion";
 
 export function AppLayout() {
+  const location = useLocation();
+
   return (
     <div className="min-h-dvh flex flex-col bg-bg">
       <header className="fixed top-0 w-full z-50 bg-bg/80 backdrop-blur-md">
@@ -15,8 +19,20 @@ export function AppLayout() {
           </Link>
         </div>
       </header>
-      <main className="flex-grow pt-24 pb-32">
-        <Outlet />
+      {/* Opacity-only: Chatbot uses a fixed-positioned inner element, and a
+          transform on this ancestor would change its containing block and
+          break that positioning. */}
+      <main className="relative flex-grow pt-24 pb-32">
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: DURATION_ENTER, ease: EASE_OUT } }}
+            exit={{ opacity: 0, transition: { duration: DURATION_EXIT, ease: EASE_IN } }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
       <BottomNav />
     </div>
