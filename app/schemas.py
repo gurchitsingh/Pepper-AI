@@ -108,6 +108,10 @@ class ChatResponse(BaseModel):
     answer_source: Literal["saved_content", "web_search"]
 
 
+class SuggestedQuestionsOut(BaseModel):
+    questions: list[str] = Field(default_factory=list)
+
+
 class InsightsTypeBreakdown(BaseModel):
     source_type: str
     count: int

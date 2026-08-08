@@ -6,7 +6,7 @@ import { ApiError } from "../api/client";
 import type { ChatSource, SavedItem } from "../api/types";
 import { useChat, type Message } from "../chat/ChatContext";
 import { detectSmallTalk, timeOfDayGreeting } from "../chat/smallTalk";
-import { suggestedQuestions } from "../chat/suggestedQuestions";
+import { suggestedQuestions, suggestedQuestionsFromContent } from "../chat/suggestedQuestions";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
@@ -61,6 +61,7 @@ export function Chatbot() {
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
+  const [contentSuggestions, setContentSuggestions] = useState<string[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -75,6 +76,10 @@ export function Chatbot() {
     api
       .listSavedItems()
       .then(setSavedItems)
+      .catch(() => {});
+    api
+      .getSuggestedQuestions()
+      .then((res) => setContentSuggestions(res.questions))
       .catch(() => {});
   }, []);
 
@@ -110,7 +115,10 @@ export function Chatbot() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages, loading]);
 
-  const suggestions = useMemo(() => suggestedQuestions(savedItems, messages), [savedItems, messages]);
+  const suggestions = useMemo(() => {
+    const contentBased = suggestedQuestionsFromContent(contentSuggestions, messages);
+    return contentBased.length > 0 ? contentBased : suggestedQuestions(savedItems, messages);
+  }, [contentSuggestions, savedItems, messages]);
 
   function handleScroll() {
     if (autoScrollingRef.current) return;
