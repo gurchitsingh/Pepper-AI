@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, animate, motion } from "framer-motion";
 import { Send, FileText, Link2, Mic, FileImage, Plus, ChevronDown } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
@@ -8,6 +8,7 @@ import { useChat, type Message } from "../chat/ChatContext";
 import { detectSmallTalk, timeOfDayGreeting } from "../chat/smallTalk";
 import { suggestedQuestions } from "../chat/suggestedQuestions";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
+import { EASE_OUT } from "../lib/motion";
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -80,22 +81,19 @@ export function Chatbot() {
 
   function smoothScrollToBottom(el: HTMLDivElement) {
     autoScrollingRef.current = true;
-    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
-    let settled = false;
-    const settle = () => {
-      if (settled) return;
-      settled = true;
-      autoScrollingRef.current = false;
-      nearBottomRef.current = true;
-      setShowScrollButton(false);
-      el.removeEventListener("scrollend", settle);
-    };
-    // "scrollend" resolves this as soon as the animation actually finishes,
-    // but isn't universally fired (e.g. some automated/headless setups) --
-    // the timeout is a guaranteed fallback so autoScrollingRef never gets
-    // stuck true and silently breaks the button.
-    el.addEventListener("scrollend", settle, { once: true });
-    setTimeout(settle, 500);
+    const target = el.scrollHeight - el.clientHeight;
+    animate(el.scrollTop, target, {
+      duration: 0.4,
+      ease: EASE_OUT,
+      onUpdate: (v) => {
+        el.scrollTop = v;
+      },
+      onComplete: () => {
+        autoScrollingRef.current = false;
+        nearBottomRef.current = true;
+        setShowScrollButton(false);
+      },
+    });
   }
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { Flame, Bookmark, Loader2 } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
@@ -139,11 +139,13 @@ export function Home() {
             <p className="text-text-secondary text-sm">No results for &ldquo;{debouncedQuery}&rdquo;.</p>
           )}
 
-          <div className="flex flex-col gap-3">
-            {(searchResults ?? []).map((item) => (
-              <SavedItemCard key={item.id} item={item} />
-            ))}
-          </div>
+          <motion.div layout className="flex flex-col gap-3">
+            <AnimatePresence mode="popLayout">
+              {(searchResults ?? []).map((item) => (
+                <SavedItemCard key={item.id} item={item} />
+              ))}
+            </AnimatePresence>
+          </motion.div>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -160,10 +162,12 @@ export function Home() {
             <p className="text-text-secondary text-sm">Nothing here yet — save something and it'll show up below.</p>
           )}
 
-          <motion.div variants={listVariants} initial="hidden" animate="show" className="flex flex-col gap-3">
-            {recent.map((item) => (
-              <SavedItemCard key={item.id} item={item} />
-            ))}
+          <motion.div layout variants={listVariants} initial="hidden" animate="show" className="flex flex-col gap-3">
+            <AnimatePresence mode="popLayout">
+              {recent.map((item) => (
+                <SavedItemCard key={item.id} item={item} />
+              ))}
+            </AnimatePresence>
           </motion.div>
         </div>
       )}
