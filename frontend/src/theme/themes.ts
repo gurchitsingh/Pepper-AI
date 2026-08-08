@@ -34,8 +34,8 @@ export const THEMES: Theme[] = [
       surface: "#FFFFFF",
       textPrimary: "#1E2A1E",
       textSecondary: "#6E7A6A",
-      accent: "#2F5233",
-      accentContrast: "#FFFFFF",
+      accent: "#F08A3C",
+      accentContrast: "#171310",
     },
   },
 ];

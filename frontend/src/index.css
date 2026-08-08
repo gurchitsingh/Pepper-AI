@@ -10,14 +10,14 @@
   --accent-contrast: #171310;
 }
 
-/* Light mode: Warm cream + forest green */
+/* Light mode: Warm cream + orange accent (same accent as dark mode) */
 [data-theme="light"] {
   --bg: #f7f3e9;
   --surface: #ffffff;
   --text-primary: #1e2a1e;
   --text-secondary: #6e7a6a;
-  --accent: #2f5233;
-  --accent-contrast: #ffffff;
+  --accent: #f08a3c;
+  --accent-contrast: #171310;
 }
 
 @theme inline {
