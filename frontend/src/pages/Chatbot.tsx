@@ -9,6 +9,7 @@ import { detectSmallTalk, timeOfDayGreeting } from "../chat/smallTalk";
 import { suggestedQuestions, suggestedQuestionsFromContent } from "../chat/suggestedQuestions";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
 import { CompleteIndicator } from "../components/CompleteIndicator";
+import { MarkdownMessage } from "../components/MarkdownMessage";
 
 const COMPLETE_INDICATOR_FADE_MS = 1700;
 const COMPLETE_INDICATOR_TOTAL_MS = 2000;
@@ -242,15 +243,13 @@ export function Chatbot() {
                 transition={{ duration: 0.25 }}
                 className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
               >
-                <div
-                  className={
-                    m.role === "user"
-                      ? "rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast"
-                      : "max-w-[95%] text-text-primary font-body leading-relaxed"
-                  }
-                >
-                  {m.content}
-                </div>
+                {m.role === "user" ? (
+                  <div className="rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast">
+                    {m.content}
+                  </div>
+                ) : (
+                  <MarkdownMessage content={m.content} />
+                )}
                 {m.role === "assistant" && justCompletedId === m.id && (
                   <CompleteIndicator fading={completeFading} />
                 )}
