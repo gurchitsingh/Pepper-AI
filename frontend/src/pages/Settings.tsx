@@ -1,7 +1,8 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, User, LogOut, Mail, Lock, Key, Download, Check } from "lucide-react";
+import Cropper, { type Area } from "react-easy-crop";
+import { X, User, LogOut, Mail, Lock, Key, Download, Check, Camera } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { THEMES } from "../theme/themes";
@@ -9,6 +10,7 @@ import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { UserOut } from "../api/types";
 import { DURATION_ENTER, DURATION_EXIT, EASE_IN, EASE_OUT } from "../lib/motion";
+import { getCroppedImageBlob } from "../lib/cropImage";
 
 const EYEBROW = "text-accent text-[11px] font-semibold uppercase tracking-widest";
 const FIELD_LABEL = "text-[11px] font-semibold uppercase tracking-widest text-text-secondary";
@@ -17,9 +19,8 @@ const FIELD_INPUT =
 
 export function Settings() {
   const { themeId, setThemeId } = useTheme();
-  const { logout } = useAuth();
+  const { user, avatarUrl, logout, refreshUser, setAvatar } = useAuth();
   const navigate = useNavigate();
-  const [me, setMe] = useState<UserOut | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -33,11 +34,17 @@ export function Settings() {
   const newPasswordStrong = /[A-Z]/.test(newPassword) && /[0-9]/.test(newPassword) && newPassword.length >= 8;
   const newPasswordsMatch = newPassword === confirmNewPassword;
 
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [pendingImageSrc, setPendingImageSrc] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [savingAvatar, setSavingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
   useEffect(() => {
-    api
-      .getMe()
-      .then(setMe)
-      .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load account"));
+    refreshUser().catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load account"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function showNotice(message: string) {
@@ -81,6 +88,42 @@ export function Settings() {
     }
   }
 
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setAvatarError(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+    const reader = new FileReader();
+    reader.onload = () => setPendingImageSrc(reader.result as string);
+    reader.readAsDataURL(file);
+  }
+
+  function closeCropModal() {
+    if (savingAvatar) return;
+    setPendingImageSrc(null);
+    setAvatarError(null);
+  }
+
+  async function handleSaveAvatar() {
+    if (!pendingImageSrc || !croppedAreaPixels) return;
+    setSavingAvatar(true);
+    setAvatarError(null);
+    try {
+      const blob = await getCroppedImageBlob(pendingImageSrc, croppedAreaPixels);
+      const updated = await api.uploadAvatar(blob);
+      setAvatar(updated, blob);
+      setPendingImageSrc(null);
+      showNotice("Profile picture updated.");
+    } catch (err) {
+      setAvatarError(err instanceof ApiError ? err.message : "Failed to save profile picture");
+    } finally {
+      setSavingAvatar(false);
+    }
+  }
+
   return (
     <div className="max-w-lg mx-auto px-6 flex flex-col gap-10">
       <div className="flex items-center justify-between -mt-2">
@@ -95,13 +138,30 @@ export function Settings() {
       </div>
 
       <div className="flex flex-col items-center text-center gap-1">
-        <span className="w-20 h-20 rounded-full bg-surface border border-text-secondary/15 flex items-center justify-center text-text-secondary mb-2">
-          <User size={32} />
-        </span>
-        {me && (
+        <div className="relative mb-2">
+          <span className="w-20 h-20 rounded-full bg-surface border border-text-secondary/15 flex items-center justify-center text-text-secondary overflow-hidden">
+            {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : <User size={32} />}
+          </span>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            aria-label="Change profile picture"
+            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-accent text-accent-contrast flex items-center justify-center border-2 border-bg"
+          >
+            <Camera size={13} />
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+        {user && (
           <>
-            <span className="text-text-primary font-heading text-lg font-semibold">{me.name || me.email}</span>
-            <span className="text-text-secondary text-sm capitalize">{me.plan} plan</span>
+            <span className="text-text-primary font-heading text-lg font-semibold">{user.name || user.email}</span>
+            <span className="text-text-secondary text-sm capitalize">{user.plan} plan</span>
           </>
         )}
       </div>
@@ -139,13 +199,13 @@ export function Settings() {
       <section className="flex flex-col gap-3">
         <h3 className={EYEBROW}>Account Management</h3>
         {error && <p className="text-error text-sm">{error}</p>}
-        {!me && !error && <p className="text-text-secondary text-sm">Loading...</p>}
-        {me && (
+        {!user && !error && <p className="text-text-secondary text-sm">Loading...</p>}
+        {user && (
           <div className="flex items-center gap-3 bg-surface border border-text-secondary/15 rounded-xl px-4 py-3.5">
             <Mail size={18} className="text-text-secondary shrink-0" />
             <div className="min-w-0">
               <p className="text-text-secondary text-xs">Email Address</p>
-              <p className="text-text-primary text-sm truncate">{me.email}</p>
+              <p className="text-text-primary text-sm truncate">{user.email}</p>
             </div>
           </div>
         )}
@@ -244,15 +304,15 @@ export function Settings() {
         {changingPassword && (
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: DURATION_ENTER, ease: EASE_OUT } }}
+            exit={{ opacity: 0, transition: { duration: DURATION_EXIT, ease: EASE_IN } }}
             className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center px-4"
             onClick={() => setChangingPassword(false)}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1, transition: { duration: DURATION_ENTER, ease: EASE_OUT } }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: DURATION_EXIT, ease: EASE_IN } }}
               onClick={(e) => e.stopPropagation()}
               className="glass-card rounded-2xl p-6 w-full max-w-xs flex flex-col gap-4"
             >
@@ -328,6 +388,68 @@ export function Settings() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {pendingImageSrc && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, transition: { duration: DURATION_ENTER, ease: EASE_OUT } }}
+            exit={{ opacity: 0, transition: { duration: DURATION_EXIT, ease: EASE_IN } }}
+            className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center px-4"
+            onClick={closeCropModal}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1, transition: { duration: DURATION_ENTER, ease: EASE_OUT } }}
+              exit={{ opacity: 0, scale: 0.95, transition: { duration: DURATION_EXIT, ease: EASE_IN } }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-card rounded-2xl p-6 w-full max-w-sm flex flex-col gap-4"
+            >
+              <p className="text-text-primary font-medium text-center">Position your photo</p>
+              <div className="relative w-full h-72 rounded-xl overflow-hidden bg-black/20">
+                <Cropper
+                  image={pendingImageSrc}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={1}
+                  cropShape="round"
+                  showGrid={false}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={(_, pixels) => setCroppedAreaPixels(pixels)}
+                />
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                aria-label="Zoom"
+                className="w-full accent-accent"
+              />
+              {avatarError && <p className="text-error text-sm text-center">{avatarError}</p>}
+              <div className="flex gap-3">
+                <button
+                  onClick={closeCropModal}
+                  disabled={savingAvatar}
+                  className="flex-grow h-11 rounded-full bg-surface text-text-secondary border border-text-secondary/20 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveAvatar}
+                  disabled={savingAvatar || !croppedAreaPixels}
+                  className="flex-grow h-11 rounded-full bg-accent text-accent-contrast font-medium disabled:opacity-50"
+                >
+                  {savingAvatar ? "Saving..." : "Save"}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
