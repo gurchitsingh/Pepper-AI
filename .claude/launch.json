@@ -6,6 +6,72 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
+    },
+    {
+      "name": "chat-fullscreen-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/chat-fullscreen/frontend && npm run dev -- --port 3091 --strictPort"],
+      "port": 3091
+    },
+    {
+      "name": "home-search-issue-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/home-search-issue/frontend && npm run dev -- --port 3092 --strictPort"],
+      "port": 3092
+    },
+    {
+      "name": "library-edit-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/library-edit/frontend && npm run dev -- --port 3002 --strictPort"],
+      "port": 3002
+    },
+    {
+      "name": "chat-green-dot-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/chat-green-dot/frontend && npm run dev -- --port 3095 --strictPort"],
+      "port": 3095
+    },
+    {
+      "name": "settings-username-email-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/settings-username-email/frontend && npm run dev -- --port 3001 --strictPort"],
+      "port": 3001
+    },
+    {
+      "name": "light-mode-accent-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/light-mode-accent/frontend && npm run dev -- --port 3098 --strictPort"],
+      "port": 3098
+    },
+    {
+      "name": "landing-page-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/landing-page/frontend && npm run dev -- --port 3096 --strictPort"],
+      "port": 3096
+    },
+    {
+      "name": "more-animations-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/more-animations/frontend && npm run dev -- --port 3097 --strictPort"],
+      "port": 3097
+    },
+    {
+      "name": "password-change-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/password-change/frontend && npm run dev -- --port 3099 --strictPort"],
+      "port": 3099
+    },
+    {
+      "name": "better-suggestions-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/better-suggestions/frontend && npm run dev -- --port 3199 --strictPort"],
+      "port": 3199
+    },
+    {
+      "name": "profile-picture-crop-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/profile-picture-crop/frontend && npm run dev -- --port 3102 --strictPort"],
+      "port": 3102
     }
   ]
 }
