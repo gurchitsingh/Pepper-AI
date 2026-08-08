@@ -8,6 +8,10 @@ import { useChat, type Message } from "../chat/ChatContext";
 import { detectSmallTalk, timeOfDayGreeting } from "../chat/smallTalk";
 import { suggestedQuestions, suggestedQuestionsFromContent } from "../chat/suggestedQuestions";
 import { ThinkingIndicator } from "../components/ThinkingIndicator";
+import { CompleteIndicator } from "../components/CompleteIndicator";
+
+const COMPLETE_INDICATOR_FADE_MS = 1700;
+const COMPLETE_INDICATOR_TOTAL_MS = 2000;
 
 const TYPE_ICON: Record<string, typeof FileText> = {
   note: FileText,
@@ -62,6 +66,9 @@ export function Chatbot() {
   const [loading, setLoading] = useState(false);
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
   const [contentSuggestions, setContentSuggestions] = useState<string[]>([]);
+  const [justCompletedId, setJustCompletedId] = useState<string | null>(null);
+  const [completeFading, setCompleteFading] = useState(false);
+  const completeTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -120,6 +127,25 @@ export function Chatbot() {
     return contentBased.length > 0 ? contentBased : suggestedQuestions(savedItems, messages);
   }, [contentSuggestions, savedItems, messages]);
 
+  useEffect(() => {
+    return () => {
+      completeTimeoutsRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  function flashComplete(messageId: string) {
+    completeTimeoutsRef.current.forEach(clearTimeout);
+    setCompleteFading(false);
+    setJustCompletedId(messageId);
+    completeTimeoutsRef.current = [
+      setTimeout(() => setCompleteFading(true), COMPLETE_INDICATOR_FADE_MS),
+      setTimeout(() => {
+        setJustCompletedId(null);
+        setCompleteFading(false);
+      }, COMPLETE_INDICATOR_TOTAL_MS),
+    ];
+  }
+
   function handleScroll() {
     if (autoScrollingRef.current) return;
     const el = scrollRef.current;
@@ -148,21 +174,27 @@ export function Chatbot() {
     if (smallTalk) {
       setLoading(true);
       await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 250));
-      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: smallTalk.reply }]);
+      const replyId = crypto.randomUUID();
+      setMessages((prev) => [...prev, { id: replyId, role: "assistant", content: smallTalk.reply }]);
       setLoading(false);
+      flashComplete(replyId);
       return;
     }
 
     setLoading(true);
     try {
       const res = await api.chat(q);
+      const replyId = crypto.randomUUID();
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: res.answer, sources: res.sources },
+        { id: replyId, role: "assistant", content: res.answer, sources: res.sources },
       ]);
+      flashComplete(replyId);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Pepper couldn't answer that — try again.";
-      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: "assistant", content: message }]);
+      const replyId = crypto.randomUUID();
+      setMessages((prev) => [...prev, { id: replyId, role: "assistant", content: message }]);
+      flashComplete(replyId);
     } finally {
       setLoading(false);
     }
@@ -219,6 +251,9 @@ export function Chatbot() {
                 >
                   {m.content}
                 </div>
+                {m.role === "assistant" && justCompletedId === m.id && (
+                  <CompleteIndicator fading={completeFading} />
+                )}
                 {m.sources && m.sources.length > 0 && (
                   <div className="flex flex-col gap-2 max-w-[85%] w-full">
                     {m.sources.map((s, i) => (
