@@ -6,6 +6,12 @@ from typing import Literal
 from pydantic import BaseModel, EmailStr, ConfigDict, Field, field_validator
 
 
+def _validate_password_strength(value: str) -> str:
+    if not re.search(r"[A-Z]", value) or not re.search(r"[0-9]", value):
+        raise ValueError("Password must contain at least one uppercase letter and one number")
+    return value
+
+
 class UserSignup(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
@@ -14,14 +20,22 @@ class UserSignup(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, value: str) -> str:
-        if not re.search(r"[A-Z]", value) or not re.search(r"[0-9]", value):
-            raise ValueError("Password must contain at least one uppercase letter and one number")
-        return value
+        return _validate_password_strength(value)
 
 
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, value: str) -> str:
+        return _validate_password_strength(value)
 
 
 class Token(BaseModel):

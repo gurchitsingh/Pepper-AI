@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { X, User, LogOut, Mail, Lock, Key, Download, Check } from "lucide-react";
@@ -11,6 +11,9 @@ import type { UserOut } from "../api/types";
 import { DURATION_ENTER, DURATION_EXIT, EASE_IN, EASE_OUT } from "../lib/motion";
 
 const EYEBROW = "text-accent text-[11px] font-semibold uppercase tracking-widest";
+const FIELD_LABEL = "text-[11px] font-semibold uppercase tracking-widest text-text-secondary";
+const FIELD_INPUT =
+  "bg-transparent border border-text-secondary/25 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-colors";
 
 export function Settings() {
   const { themeId, setThemeId } = useTheme();
@@ -20,6 +23,15 @@ export function Settings() {
   const [error, setError] = useState<string | null>(null);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [changingSubmitting, setChangingSubmitting] = useState(false);
+
+  const newPasswordStrong = /[A-Z]/.test(newPassword) && /[0-9]/.test(newPassword) && newPassword.length >= 8;
+  const newPasswordsMatch = newPassword === confirmNewPassword;
 
   useEffect(() => {
     api
@@ -36,6 +48,37 @@ export function Settings() {
   function handleConfirmLogout() {
     logout();
     navigate("/login");
+  }
+
+  function openChangePassword() {
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setPasswordError(null);
+    setChangingPassword(true);
+  }
+
+  async function handleChangePassword(e: FormEvent) {
+    e.preventDefault();
+    setPasswordError(null);
+    if (!newPasswordStrong) {
+      setPasswordError("New password must be at least 8 characters with an uppercase letter and a number");
+      return;
+    }
+    if (!newPasswordsMatch) {
+      setPasswordError("New passwords do not match");
+      return;
+    }
+    setChangingSubmitting(true);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setChangingPassword(false);
+      showNotice("Password changed successfully.");
+    } catch (err) {
+      setPasswordError(err instanceof ApiError ? err.message : "Failed to change password");
+    } finally {
+      setChangingSubmitting(false);
+    }
   }
 
   return (
@@ -117,7 +160,7 @@ export function Settings() {
             <span className="text-text-secondary text-xs font-semibold uppercase tracking-wide">Disabled</span>
           </div>
           <button
-            onClick={() => showNotice("Password changes aren't available yet.")}
+            onClick={openChangePassword}
             className="flex items-center gap-3 px-4 py-3.5 text-left hover:bg-bg/40 transition-colors"
           >
             <Key size={18} className="text-text-secondary shrink-0" />
@@ -192,6 +235,99 @@ export function Settings() {
                   Sign out
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {changingPassword && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/50 flex items-center justify-center px-4"
+            onClick={() => setChangingPassword(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-card rounded-2xl p-6 w-full max-w-xs flex flex-col gap-4"
+            >
+              <p className="text-text-primary font-medium text-center">Change Password</p>
+              <form onSubmit={handleChangePassword} className="flex flex-col gap-3">
+                {passwordError && <p className="text-error text-sm">{passwordError}</p>}
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="current-password" className={FIELD_LABEL}>
+                    Current password
+                  </label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    required
+                    autoFocus
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className={FIELD_INPUT}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="new-password" className={FIELD_LABEL}>
+                    New password
+                  </label>
+                  <input
+                    id="new-password"
+                    type="password"
+                    required
+                    minLength={8}
+                    placeholder="Min 8 characters"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className={FIELD_INPUT}
+                  />
+                  {newPassword.length > 0 && !newPasswordStrong && (
+                    <p className="text-error text-xs">Must include an uppercase letter and a number</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="confirm-new-password" className={FIELD_LABEL}>
+                    Repeat new password
+                  </label>
+                  <input
+                    id="confirm-new-password"
+                    type="password"
+                    required
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                    className={FIELD_INPUT}
+                  />
+                  {confirmNewPassword.length > 0 && !newPasswordsMatch && (
+                    <p className="text-error text-xs">Passwords do not match</p>
+                  )}
+                </div>
+
+                <div className="flex gap-3 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setChangingPassword(false)}
+                    className="flex-grow h-11 rounded-full bg-surface text-text-secondary border border-text-secondary/20"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={changingSubmitting}
+                    className="flex-grow h-11 rounded-full bg-accent text-accent-contrast font-medium disabled:opacity-50"
+                  >
+                    {changingSubmitting ? "Saving..." : "Save"}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}
