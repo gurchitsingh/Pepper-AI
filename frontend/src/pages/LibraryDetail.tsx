@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowLeft, FileText, Link2, Mic, FileImage, Trash2, Folder as FolderIcon } from "lucide-react";
+import { ArrowLeft, FileText, Link2, Mic, FileImage, Trash2, Pencil, Folder as FolderIcon } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { SavedItem } from "../api/types";
@@ -26,6 +26,12 @@ export function LibraryDetail() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editContent, setEditContent] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -64,6 +70,43 @@ export function LibraryDetail() {
       });
   }
 
+  function startEditing() {
+    if (!item) return;
+    setEditTitle(item.title ?? "");
+    setEditContent(item.transcript ?? "");
+    setSaveError(null);
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    setEditing(false);
+    setSaveError(null);
+  }
+
+  function handleSaveEdit() {
+    if (!id || !item) return;
+    const isNote = item.source_type === "note";
+    if (isNote && !editContent.trim()) {
+      setSaveError("Content can't be empty");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    const payload: { title?: string | null; content?: string } = { title: editTitle.trim() || null };
+    if (isNote) payload.content = editContent;
+    api
+      .updateSavedItem(id, payload)
+      .then((updated) => {
+        setItem(updated);
+        setEditing(false);
+        setSaving(false);
+      })
+      .catch((err) => {
+        setSaveError(err instanceof ApiError ? err.message : "Failed to save changes");
+        setSaving(false);
+      });
+  }
+
   const Icon = item ? TYPE_ICON[item.source_type] ?? FileText : FileText;
 
   return (
@@ -74,20 +117,31 @@ export function LibraryDetail() {
           Back to Library
         </Link>
 
-        {item && (
-          <button
-            onClick={() => setConfirmingDelete(true)}
-            aria-label="Delete item"
-            className="flex items-center gap-1.5 text-error text-sm hover:opacity-80"
-          >
-            <Trash2 size={16} />
-            Delete
-          </button>
+        {item && !editing && (
+          <div className="flex items-center gap-4">
+            <button
+              onClick={startEditing}
+              aria-label="Edit item"
+              className="flex items-center gap-1.5 text-text-secondary text-sm hover:text-accent"
+            >
+              <Pencil size={16} />
+              Edit
+            </button>
+            <button
+              onClick={() => setConfirmingDelete(true)}
+              aria-label="Delete item"
+              className="flex items-center gap-1.5 text-error text-sm hover:opacity-80"
+            >
+              <Trash2 size={16} />
+              Delete
+            </button>
+          </div>
         )}
       </div>
 
       {error && <p className="text-error text-sm">{error}</p>}
       {deleteError && <p className="text-error text-sm">{deleteError}</p>}
+      {saveError && <p className="text-error text-sm">{saveError}</p>}
       {!item && !error && <p className="text-text-secondary text-sm">Loading...</p>}
 
       {item && (
@@ -107,7 +161,18 @@ export function LibraryDetail() {
             )}
           </div>
 
-          {item.title && <h2 className="font-heading text-text-primary text-2xl font-semibold">{item.title}</h2>}
+          {editing ? (
+            <input
+              type="text"
+              autoFocus
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="Title (optional)"
+              className="bg-bg border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary font-heading text-xl font-semibold outline-none focus:ring-2 focus:ring-accent"
+            />
+          ) : (
+            item.title && <h2 className="font-heading text-text-primary text-2xl font-semibold">{item.title}</h2>
+          )}
 
           {item.source_url && (
             <a
@@ -137,6 +202,13 @@ export function LibraryDetail() {
           {item.status !== "failed" && (
             item.status !== "ready" ? (
               <p className="text-text-secondary text-sm">Still processing ({item.status})...</p>
+            ) : editing && item.source_type === "note" ? (
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                rows={8}
+                className="bg-bg border border-text-secondary/20 rounded-lg px-4 py-3 text-text-primary font-body outline-none focus:ring-2 focus:ring-accent resize-none"
+              />
             ) : item.transcript ? (
               <p className="font-body text-text-primary whitespace-pre-wrap leading-relaxed">{item.transcript}</p>
             ) : (
@@ -145,6 +217,25 @@ export function LibraryDetail() {
               <p className="text-text-secondary text-sm italic">Pepper couldn't find any text in this one.</p>
 
             )
+          )}
+
+          {editing && (
+            <div className="flex gap-3">
+              <button
+                onClick={cancelEditing}
+                disabled={saving}
+                className="flex-grow h-11 rounded-full bg-surface text-text-secondary border border-text-secondary/20 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving}
+                className="flex-grow h-11 rounded-full bg-accent text-accent-contrast font-medium disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+            </div>
           )}
         </div>
       )}

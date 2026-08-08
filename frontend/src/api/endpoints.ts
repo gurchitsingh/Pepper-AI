@@ -77,6 +77,13 @@ export function deleteSavedItem(id: string) {
   return apiFetch<void>(`/saved-items/${id}`, { method: "DELETE" });
 }
 
+export function updateSavedItem(id: string, payload: { title?: string | null; content?: string }) {
+  return apiFetch<SavedItem>(`/saved-items/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function listFolders() {
   return apiFetch<Folder[]>("/folders");
 }
