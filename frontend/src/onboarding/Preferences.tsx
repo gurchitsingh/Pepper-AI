@@ -138,7 +138,7 @@ export function Preferences() {
           <button
             onClick={handleContinue}
             disabled={!canContinue}
-            className="ml-auto bg-accent text-accent-contrast font-medium h-12 px-8 rounded-full disabled:opacity-40"
+            className="ml-auto btn-accent font-medium h-12 px-8 rounded-full disabled:opacity-40"
           >
             Continue
           </button>

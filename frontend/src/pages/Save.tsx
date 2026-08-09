@@ -282,7 +282,7 @@ export function Save() {
                 whileTap={{ scale: 0.97 }}
                 type="submit"
                 disabled={submitting || !noteContent.trim()}
-                className="bg-accent text-accent-contrast font-medium h-12 rounded-full disabled:opacity-50"
+                className="btn-accent font-medium h-12 rounded-full disabled:opacity-50"
               >
                 {submitting ? "Saving..." : "Save note"}
               </motion.button>
@@ -306,7 +306,7 @@ export function Save() {
                 whileTap={{ scale: 0.97 }}
                 type="submit"
                 disabled={submitting || !linkUrl.trim()}
-                className="bg-accent text-accent-contrast font-medium h-12 rounded-full disabled:opacity-50"
+                className="btn-accent font-medium h-12 rounded-full disabled:opacity-50"
               >
                 {submitting ? "Saving..." : "Save link"}
               </motion.button>

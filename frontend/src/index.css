@@ -35,6 +35,16 @@
   --font-body: "Inter", sans-serif;
 }
 
+/* Soft, diffused elevation -- natural light, not a UI-kit drop shadow.
+   Same values across themes: a wide, low-opacity black cast reads as
+   ambient depth on both the dark themes and the light "cream" theme. */
+:root {
+  --shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.14),
+    0 12px 28px -10px rgba(0, 0, 0, 0.32);
+  --shadow-button: 0 2px 4px rgba(0, 0, 0, 0.16), 0 6px 16px -6px rgba(0, 0, 0, 0.28);
+  --shadow-button-pressed: 0 1px 2px rgba(0, 0, 0, 0.18);
+}
+
 body {
   background-color: var(--bg);
   color: var(--text-primary);
@@ -46,5 +56,19 @@ body {
 .glass-card {
   background: var(--surface);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-card);
   transition: background-color 400ms ease, border-color 400ms ease;
+}
+
+/* Primary accent pill button: lifted at rest, presses flat on tap
+   (pairs with the existing framer-motion whileTap scale). */
+.btn-accent {
+  background-color: var(--accent);
+  color: var(--accent-contrast);
+  box-shadow: var(--shadow-button);
+  transition: box-shadow 150ms ease;
+}
+
+.btn-accent:active {
+  box-shadow: var(--shadow-button-pressed);
 }

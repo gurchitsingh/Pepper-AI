@@ -126,7 +126,7 @@ export function Signup() {
           <button
             type="submit"
             disabled={submitting}
-            className="bg-accent text-accent-contrast font-medium h-12 rounded-full mt-2 disabled:opacity-50"
+            className="btn-accent font-medium h-12 rounded-full mt-2 disabled:opacity-50"
           >
             {submitting ? "Creating account..." : "Create Account"}
           </button>

@@ -171,7 +171,7 @@ export function Slides() {
       <div className="px-8 pb-4 flex flex-col items-center gap-3">
         <button
           onClick={() => navigate("/signup")}
-          className="bg-accent text-accent-contrast font-medium h-12 w-full max-w-sm rounded-full mx-auto flex items-center justify-center gap-2"
+          className="btn-accent font-medium h-12 w-full max-w-sm rounded-full mx-auto flex items-center justify-center gap-2"
         >
           Get Started
           <ArrowRight size={18} />

@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-30T00:00:00.000Z",
+  "title": "Design System: Pepper AI",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Amber Ember",
+        "canonical": "#F08A3C",
+        "tonalRamp": ["#3D1F0A", "#5C2E0F", "#8A4517", "#C06B24", "#F08A3C", "#F4A868", "#F8C596", "#FCE4CE"]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Near-Black Canvas",
+        "canonical": "#121212",
+        "tonalRamp": ["#121212", "#232323", "#3D3D3D", "#5C5C5C", "#757575", "#949494", "#C2C2C2", "#EDEDED"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Warm Charcoal Surface",
+        "canonical": "#201C1A",
+        "tonalRamp": ["#1A1613", "#2E2723", "#473D36", "#6B5D53", "#86766A", "#A99A8C", "#CFC3B8", "#F2ECE5"]
+      },
+      "text-primary": { "role": "neutral", "displayName": "Warm Ivory", "canonical": "#F2EEE9" },
+      "text-secondary": { "role": "neutral", "displayName": "Muted Taupe", "canonical": "#A39C93" },
+      "accent-contrast": { "role": "neutral", "displayName": "Accent Contrast", "canonical": "#171310" },
+      "error": { "role": "error", "displayName": "Signal Red", "canonical": "#E5484D" },
+      "success": { "role": "success", "displayName": "Signal Green", "canonical": "#2F9E5B" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Onboarding slide titles only — the single most ceremonial text in the app." },
+      "headline": { "displayName": "Headline", "purpose": "Page titles and the header wordmark." },
+      "title": { "displayName": "Title", "purpose": "Section headers within a page and stat numbers." },
+      "body": { "displayName": "Body", "purpose": "Paragraph text, inputs, button labels, list item titles." },
+      "label": { "displayName": "Label", "purpose": "Small uppercase source-type badges and stat captions." }
+    },
+    "shadows": [
+      { "name": "shadow-card", "value": "inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 2px rgba(0,0,0,0.14), 0 12px 28px -10px rgba(0,0,0,0.32)", "purpose": "Ambient lift under every glass-card surface (list items, stat tiles, forms, modals)." },
+      { "name": "shadow-button", "value": "0 2px 4px rgba(0,0,0,0.16), 0 6px 16px -6px rgba(0,0,0,0.28)", "purpose": "Resting lift under primary accent pill buttons." },
+      { "name": "shadow-button-pressed", "value": "0 1px 2px rgba(0,0,0,0.18)", "purpose": "Flattened shadow on :active — the pushed-in feel, paired with whileTap scale." }
+    ],
+    "motion": [
+      { "name": "tap-scale", "value": "scale(0.9 to 0.97)", "purpose": "framer-motion whileTap on every button, nav item, and chip." },
+      { "name": "list-stagger", "value": "staggerChildren: 0.08s", "purpose": "Sequential reveal of list/card entries on mount." },
+      { "name": "modal-spring", "value": "type: spring, damping: 26, stiffness: 300", "purpose": "Modal sheet entrance (Save entry modals)." },
+      { "name": "fade-slide", "value": "duration: 0.13s-0.25s, ease/easeOut", "purpose": "Onboarding slide transitions and card/message entrances." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one high-emphasis action per screen: accent-filled pill, lifts at rest, presses flat on tap.",
+      "html": "<button class=\"ds-btn-primary\">Save something</button>",
+      "css": ".ds-btn-primary { background: var(--accent); color: var(--accent-contrast); border: none; border-radius: 9999px; height: 48px; padding: 0 32px; font-family: Inter, sans-serif; font-weight: 500; font-size: 1rem; box-shadow: var(--shadow-button); transition: box-shadow 150ms ease, transform 150ms ease; cursor: pointer; } .ds-btn-primary:active { box-shadow: var(--shadow-button-pressed); transform: scale(0.97); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Danger / Secondary Buttons",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Low-emphasis (surface, bordered) and destructive (error-filled) pill variants, used together in confirmation modals.",
+      "html": "<div style=\"display:flex;gap:12px\"><button class=\"ds-btn-secondary\">Cancel</button><button class=\"ds-btn-danger\">Sign out</button></div>",
+      "css": ".ds-btn-secondary { flex: 1; height: 44px; border-radius: 9999px; background: var(--surface); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.12); font-family: Inter, sans-serif; cursor: pointer; } .ds-btn-danger { flex: 1; height: 44px; border-radius: 9999px; background: var(--color-error, #E5484D); color: #fff; border: none; font-family: Inter, sans-serif; font-weight: 500; cursor: pointer; }"
+    },
+    {
+      "name": "Saved-Item Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The recurring glass-card list item: icon badge, uppercase type label, title.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-icon\">&#9733;</div><div class=\"ds-card-body\"><span class=\"ds-card-label\">Article</span><h3 class=\"ds-card-title\">How to build a second brain</h3></div></div>",
+      "css": ".ds-card { background: var(--surface); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; box-shadow: var(--shadow-card); padding: 16px; display: flex; align-items: center; gap: 12px; } .ds-card-icon { width: 40px; height: 40px; border-radius: 9999px; background: var(--bg); display: flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0; } .ds-card-label { display: block; font-family: Inter, sans-serif; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); } .ds-card-title { font-family: Inter, sans-serif; font-weight: 500; color: var(--text-primary); margin: 0; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": "chip-active",
+      "description": "Pill toggle used for Library's category filters — active state fills with the accent color.",
+      "html": "<div style=\"display:flex;gap:8px\"><button class=\"ds-chip ds-chip-active\">All</button><button class=\"ds-chip\">Notes</button></div>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 9999px; font-family: Inter, sans-serif; font-size: 0.875rem; background: var(--surface); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.12); cursor: pointer; transition: background 150ms ease, color 150ms ease; } .ds-chip:active { transform: scale(0.95); } .ds-chip-active { background: var(--accent); color: var(--accent-contrast); border-color: var(--accent); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard bordered surface field with an accent focus ring.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Ask about what you've saved...\" />",
+      "css": ".ds-input { background: var(--surface); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 12px 16px; color: var(--text-primary); font-family: Inter, sans-serif; font-size: 1rem; outline: none; width: 100%; box-sizing: border-box; } .ds-input::placeholder { color: var(--text-secondary); } .ds-input:focus { box-shadow: 0 0 0 2px var(--accent); }"
+    },
+    {
+      "name": "Bottom Nav",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Fixed 5-item tab bar; active tab is accent-colored with a bolder icon stroke.",
+      "html": "<nav class=\"ds-nav\"><button class=\"ds-nav-item ds-nav-item-active\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/><path d=\"M9 22V12h6v10\"/></svg><span>Home</span></button><button class=\"ds-nav-item\"><svg width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"M12 8v8M8 12h8\"/></svg><span>Save</span></button></nav>",
+      "css": ".ds-nav { display: flex; justify-content: space-around; align-items: center; background: var(--surface); border-top: 1px solid rgba(255,255,255,0.08); padding: 12px 8px; } .ds-nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; background: none; border: none; color: var(--text-secondary); font-family: Inter, sans-serif; font-size: 11px; cursor: pointer; } .ds-nav-item-active { color: var(--accent); }"
+    },
+    {
+      "name": "Confirmation Modal",
+      "kind": "custom",
+      "refersTo": null,
+      "description": "Signature dialog pattern: dark scrim, centered glass sheet with a 24px radius (the largest in the system), spring entrance, paired secondary/danger buttons.",
+      "html": "<div class=\"ds-modal-overlay\"><div class=\"ds-modal\"><p class=\"ds-modal-text\">Sign out of Pepper?</p><div class=\"ds-modal-actions\"><button class=\"ds-btn-secondary\">Cancel</button><button class=\"ds-btn-danger\">Sign out</button></div></div></div>",
+      "css": ".ds-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; } .ds-modal { background: var(--surface); border-radius: 24px; padding: 24px; max-width: 320px; width: 100%; box-shadow: var(--shadow-card); text-align: center; display: flex; flex-direction: column; gap: 16px; } .ds-modal-text { color: var(--text-primary); font-family: Inter, sans-serif; font-weight: 500; margin: 0; } .ds-modal-actions { display: flex; gap: 12px; } .ds-btn-secondary { flex: 1; height: 44px; border-radius: 9999px; background: var(--surface); color: var(--text-secondary); border: 1px solid rgba(255,255,255,0.12); font-family: Inter, sans-serif; cursor: pointer; } .ds-btn-danger { flex: 1; height: 44px; border-radius: 9999px; background: var(--color-error, #E5484D); color: #fff; border: none; font-family: Inter, sans-serif; font-weight: 500; cursor: pointer; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Warm Study",
+    "overview": "Pepper reads like a cozy, personal workspace rather than a productivity tool: a warm serif for headings, soft glass-like surfaces, and hand-drawn blob illustrations that make the app feel like a notebook lit by lamplight, not a dashboard. It's built to hold a lot of disparate content (reels, PDFs, voice notes, articles) without ever feeling clinical or archival — the interface stays calm and single-accented so the content, not the chrome, is what stands out.\n\nDensity is low and forgiving: generous padding, one primary action per screen, short line lengths, and a bottom-tab structure that never asks the user to hold more than five destinations in mind at once. Depth is soft and physical — surfaces lift gently off the page and buttons press down when tapped — so the app feels like a well-made object you're handling, not a flat document you're scrolling. Nothing here is sharp-cornered, heavy, or loud; the one accent color is the only thing allowed to raise its voice.",
+    "keyCharacteristics": [
+      "One warm serif display voice (Fraunces) paired with a quiet, highly-legible sans (Inter) for everything functional.",
+      "A single accent color per theme carries all emphasis and interactivity; neutrals do everything else.",
+      "Soft, diffused, natural-light shadows on cards and buttons — never a hard, dark UI-kit drop-shadow.",
+      "Fully-rounded pill shapes for every tappable action; generously-rounded rectangles for containers.",
+      "Fast (120–250ms), physical micro-motion: press-scale on tap, staggered list reveals, spring-based modal entrances."
+    ],
+    "rules": [
+      { "name": "The One Accent Rule", "body": "Exactly one accent color is active at a time. It marks primary actions, active/selected state, and emphasis — nothing else in the interface competes with it for attention.", "section": "colors" },
+      { "name": "The Two-Voice Rule", "body": "Fraunces speaks only for headings, the wordmark, and standalone numbers — never for body copy, labels, or button text. Inter carries every functional string in the app.", "section": "typography" },
+      { "name": "The Natural Light Rule", "body": "Shadows are always wide, soft, and low-opacity — large blur radius, negative spread, black at ≤32% opacity. A shadow that reads as a hard, dark edge doesn't belong in this system.", "section": "elevation" },
+      { "name": "The Full-Pill Rule", "body": "If it's tappable and represents an action (not a container), it's rounded-full. Containers step through the fixed 8/12/16/24px scale instead — never a bespoke radius outside it.", "section": "typography" }
+    ],
+    "dos": [
+      "Do use exactly one accent color per theme for every interactive/emphasis moment; keep everything else neutral.",
+      "Do give every tappable action a fully-rounded (rounded-full) shape.",
+      "Do use soft, wide, low-opacity shadows (--shadow-card / --shadow-button) for lift — large blur, negative spread, ≤32% black opacity.",
+      "Do pair a whileTap scale-down with a matching :active shadow flatten on primary buttons, so press feedback is both motion and depth.",
+      "Do reserve Fraunces for headings, the wordmark, and standalone numbers; keep Inter for everything else."
+    ],
+    "donts": [
+      "Don't use a hard, dark, or heavy drop-shadow (shadow-lg/shadow-xl-style defaults) anywhere — it breaks the soft/natural-light language.",
+      "Don't introduce a second accent color on the same screen, even for a \"secondary\" action — use neutral surface/border treatments instead.",
+      "Don't give a container (card, modal, input) a bespoke corner radius outside the 8/12/16/24px scale, or give a button anything less than fully rounded.",
+      "Don't use photographic or gradient imagery for illustrations — the flat, single-tint blob-and-icon style is the only illustration language this system has."
+    ]
+  }
+}
