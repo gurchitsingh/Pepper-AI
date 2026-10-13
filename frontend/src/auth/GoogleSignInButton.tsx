@@ -77,8 +77,9 @@ export function GoogleSignInButton() {
           client_id: CLIENT_ID,
           callback: async ({ credential }) => {
             try {
-              await googleLogin(credential);
-              navigate(isOnboarded() ? "/" : "/preferences");
+              const token = await googleLogin(credential);
+              const onboarded = token.onboarding_completed || isOnboarded();
+              navigate(onboarded ? "/" : "/preferences");
             } catch {
               setError("Google sign-in failed");
             }

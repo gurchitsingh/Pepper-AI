@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Float, ForeignKey, Index, Integer, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Boolean, Column, String, DateTime, Float, ForeignKey, Index, Integer, Text, func
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from pgvector.sqlalchemy import Vector
 from app.database import Base
 
@@ -17,13 +17,24 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String, unique=True, nullable=False, index=True)
+    username = Column(String, nullable=False)
     name = Column(String, nullable=True)
     hashed_password = Column(String, nullable=True)
     oauth_provider = Column(String, nullable=True)
     oauth_provider_id = Column(String, nullable=True)
+    auth_provider = Column(String, nullable=False, default="password", server_default="password")
     plan = Column(String, nullable=False, default="free", server_default="free")
     avatar_path = Column(String, nullable=True)
+    profile_picture_url = Column(String, nullable=True)
+    email_verified = Column(Boolean, nullable=False, default=False, server_default="false")
+    email_verified_at = Column(DateTime(timezone=True), nullable=True)
+    theme_preference = Column(String, nullable=True)
+    interests = Column(ARRAY(String), nullable=True)
+    referral_source = Column(String, nullable=True)
+    onboarding_completed = Column(Boolean, nullable=False, default=False, server_default="false")
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
 
     __table_args__ = (
         Index(
@@ -32,11 +43,24 @@ class User(Base):
             "oauth_provider_id",
             unique=True,
         ),
+        Index("ix_users_username_lower", func.lower(username), unique=True),
     )
 
     @property
     def has_avatar(self) -> bool:
         return self.avatar_path is not None
+
+
+class EmailVerificationCode(Base):
+    __tablename__ = "email_verification_codes"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    code_hash = Column(String, nullable=False)
+    attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    last_sent_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
 
 
 class Folder(Base):

@@ -12,10 +12,25 @@ def _validate_password_strength(value: str) -> str:
     return value
 
 
+USERNAME_PATTERN = re.compile(r"^[a-zA-Z0-9_.]{3,32}$")
+
+
+def _validate_username_format(value: str) -> str:
+    if not USERNAME_PATTERN.match(value):
+        raise ValueError("Username must be 3-32 characters: letters, numbers, underscores, or periods")
+    return value
+
+
 class UserSignup(BaseModel):
-    email: EmailStr
+    email: str
+    username: str
     password: str = Field(min_length=8)
     name: str | None = None
+
+    @field_validator("username")
+    @classmethod
+    def username_format(cls, value: str) -> str:
+        return _validate_username_format(value)
 
     @field_validator("password")
     @classmethod
@@ -26,6 +41,15 @@ class UserSignup(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class VerifyEmailRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$")
+
+
+class ResendCodeRequest(BaseModel):
+    email: EmailStr
 
 
 class PasswordChange(BaseModel):
@@ -41,6 +65,8 @@ class PasswordChange(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    email_verified: bool = False
+    onboarding_completed: bool = False
 
 
 class OAuthLogin(BaseModel):
@@ -52,14 +78,27 @@ class UserOut(BaseModel):
 
     id: uuid.UUID
     email: str
+    username: str
     name: str | None
     plan: str
     has_avatar: bool
+    profile_picture_url: str | None
+    email_verified: bool
+    auth_provider: str
+    theme_preference: str | None
+    interests: list[str] | None
+    referral_source: str | None
+    onboarding_completed: bool
 
 
 class UserUpdate(BaseModel):
     name: str | None = None
-    email: EmailStr | None = None
+    email: str | None = None
+    username: str | None = None
+    theme: str | None = None
+    interests: list[str] | None = None
+    referral_source: str | None = None
+    onboarding_completed: bool | None = None
 
     @field_validator("name")
     @classmethod
@@ -67,6 +106,13 @@ class UserUpdate(BaseModel):
         if value is not None and not value.strip():
             raise ValueError("Name cannot be blank")
         return value.strip() if value is not None else value
+
+    @field_validator("username")
+    @classmethod
+    def username_format(cls, value: str | None) -> str | None:
+        if value is None:
+            return value
+        return _validate_username_format(value)
 
 
 class SavedItemCreate(BaseModel):

@@ -1,10 +1,10 @@
 import { ApiError, apiFetch, apiFetchBlob, apiFetchSse } from "./client";
 import type { ChatResponse, ChatStreamEvent, Folder, Insights, SavedItem, SuggestedQuestionsOut, Token, UserOut } from "./types";
 
-export function signup(email: string, password: string, name?: string) {
+export function signup(email: string, password: string, username: string, name?: string) {
   return apiFetch<Token>("/auth/signup", {
     method: "POST",
-    body: JSON.stringify({ email, password, name: name || null }),
+    body: JSON.stringify({ email, password, username, name: name || null }),
   });
 }
 
@@ -12,6 +12,20 @@ export function login(email: string, password: string) {
   return apiFetch<Token>("/auth/login", {
     method: "POST",
     body: JSON.stringify({ email, password }),
+  });
+}
+
+export function verifyEmail(email: string, code: string) {
+  return apiFetch<Token>("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ email, code }),
+  });
+}
+
+export function resendVerificationCode(email: string) {
+  return apiFetch<void>("/auth/resend-verification", {
+    method: "POST",
+    body: JSON.stringify({ email }),
   });
 }
 
@@ -46,7 +60,15 @@ export function getAvatar() {
   return apiFetchBlob("/auth/avatar");
 }
 
-export function updateMe(payload: { name?: string; email?: string }) {
+export function updateMe(payload: {
+  name?: string;
+  email?: string;
+  username?: string;
+  theme?: string;
+  interests?: string[];
+  referral_source?: string;
+  onboarding_completed?: boolean;
+}) {
   return apiFetch<UserOut>("/auth/me", {
     method: "PATCH",
     body: JSON.stringify(payload),

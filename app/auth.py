@@ -1,14 +1,18 @@
 import os
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
 import jwt
+from disposable_email_domains import blocklist as DISPOSABLE_EMAIL_DOMAINS
 from dotenv import load_dotenv
+from email_validator import EmailNotValidError, validate_email
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
 from passlib.context import CryptContext
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -36,6 +40,33 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
+
+def validate_and_normalize_email(email: str) -> str:
+    """Trim/lowercase, check syntax + deliverability (MX records), and reject disposable domains."""
+    candidate = email.strip().lower()
+    try:
+        result = validate_email(candidate, check_deliverability=True)
+    except EmailNotValidError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This email address isn't valid.")
+
+    normalized = result.normalized.lower()
+    domain = normalized.rsplit("@", 1)[-1]
+    if domain in DISPOSABLE_EMAIL_DOMAINS:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please use a permanent email address.")
+
+    return normalized
+
+
+def generate_unique_username(db: Session, base: str) -> str:
+    """Derive a unique, case-insensitive username from an email or display name."""
+    cleaned = re.sub(r"[^a-zA-Z0-9_.]", "", base.split("@")[0]) or "user"
+    candidate = cleaned
+    suffix = 0
+    while db.query(User).filter(func.lower(User.username) == candidate.lower()).first():
+        suffix += 1
+        candidate = f"{cleaned}{suffix}"
+    return candidate
 
 
 def create_access_token(user_id: uuid.UUID) -> str:
@@ -85,13 +116,23 @@ def verify_apple_token(token: str) -> dict:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Apple ID token")
 
 
-def find_or_create_oauth_user(db: Session, provider: str, provider_id: str, email: str | None, name: str | None = None) -> User:
+def find_or_create_oauth_user(
+    db: Session,
+    provider: str,
+    provider_id: str,
+    email: str | None,
+    name: str | None = None,
+    picture: str | None = None,
+) -> User:
     user = (
         db.query(User)
         .filter(User.oauth_provider == provider, User.oauth_provider_id == provider_id)
         .first()
     )
     if user:
+        user.last_login_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(user)
         return user
 
     if not email:
@@ -100,6 +141,7 @@ def find_or_create_oauth_user(db: Session, provider: str, provider_id: str, emai
             detail=f"{provider.capitalize()} did not provide an email for this account",
         )
 
+    email = email.strip().lower()
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -108,10 +150,16 @@ def find_or_create_oauth_user(db: Session, provider: str, provider_id: str, emai
 
     user = User(
         email=email,
+        username=generate_unique_username(db, email),
         name=name,
         hashed_password=None,
         oauth_provider=provider,
         oauth_provider_id=provider_id,
+        auth_provider=provider,
+        profile_picture_url=picture,
+        email_verified=True,
+        email_verified_at=datetime.now(timezone.utc),
+        last_login_at=datetime.now(timezone.utc),
     )
     db.add(user)
     db.commit()

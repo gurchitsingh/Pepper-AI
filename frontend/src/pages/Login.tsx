@@ -22,8 +22,14 @@ export function Login() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email, password);
-      navigate(isOnboarded() ? "/" : "/preferences");
+      const token = await login(email, password);
+      if (!token.email_verified) {
+        navigate("/verify-email", { state: { email } });
+      } else if (!token.onboarding_completed && !isOnboarded()) {
+        navigate("/preferences");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Login failed");
     } finally {

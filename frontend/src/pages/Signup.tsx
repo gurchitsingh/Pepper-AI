@@ -9,10 +9,13 @@ const FIELD_LABEL = "text-[11px] font-semibold uppercase tracking-widest text-te
 const FIELD_INPUT =
   "bg-transparent border border-text-secondary/25 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-colors";
 
+const USERNAME_PATTERN = /^[a-zA-Z0-9_.]{3,32}$/;
+
 export function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,10 +24,15 @@ export function Signup() {
 
   const passwordStrong = /[A-Z]/.test(password) && /[0-9]/.test(password);
   const passwordsMatch = password === confirmPassword;
+  const usernameValid = USERNAME_PATTERN.test(username);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    if (!usernameValid) {
+      setError("Username must be 3-32 characters: letters, numbers, underscores, or periods");
+      return;
+    }
     if (!passwordStrong) {
       setError("Password must contain at least one uppercase letter and one number");
       return;
@@ -35,8 +43,14 @@ export function Signup() {
     }
     setSubmitting(true);
     try {
-      await signup(email, password, name);
-      navigate(isOnboarded() ? "/" : "/preferences");
+      const token = await signup(email, password, username, name);
+      if (!token.email_verified) {
+        navigate("/verify-email", { state: { email } });
+      } else if (!token.onboarding_completed && !isOnboarded()) {
+        navigate("/preferences");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Signup failed");
     } finally {
@@ -69,6 +83,24 @@ export function Signup() {
               onChange={(e) => setName(e.target.value)}
               className={FIELD_INPUT}
             />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="signup-username" className={FIELD_LABEL}>
+              Username
+            </label>
+            <input
+              id="signup-username"
+              type="text"
+              required
+              placeholder="yourusername"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={FIELD_INPUT}
+            />
+            {username.length > 0 && !usernameValid && (
+              <p className="text-error text-xs">3-32 characters: letters, numbers, underscores, or periods</p>
+            )}
           </div>
 
           <div className="flex flex-col gap-1.5">

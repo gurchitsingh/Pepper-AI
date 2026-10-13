@@ -1,6 +1,8 @@
 export interface Token {
   access_token: string;
   token_type: string;
+  email_verified: boolean;
+  onboarding_completed: boolean;
 }
 
 export interface SavedItem {
@@ -27,9 +29,17 @@ export interface Folder {
 export interface UserOut {
   id: string;
   email: string;
+  username: string;
   name: string | null;
   plan: string;
   has_avatar: boolean;
+  profile_picture_url: string | null;
+  email_verified: boolean;
+  auth_provider: string;
+  theme_preference: string | null;
+  interests: string[] | null;
+  referral_source: string | null;
+  onboarding_completed: boolean;
 }
 
 export interface ChatSource {
