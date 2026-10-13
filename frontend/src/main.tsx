@@ -8,3 +8,12 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// Fade out and remove the static boot splash (see index.html) now that
+// React has painted its first frame.
+requestAnimationFrame(() => {
+  const splash = document.getElementById('app-splash')
+  if (!splash) return
+  splash.classList.add('app-splash-hide')
+  setTimeout(() => splash.remove(), 300)
+})
