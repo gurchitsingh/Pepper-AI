@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, Link2, Mic, FileImage, Infinity as InfinityIcon, Folder as FolderIcon, RefreshCw, Rows3, Plus } from "lucide-react";
+import { FileText, Link2, Mic, FileImage, Infinity as InfinityIcon, Folder as FolderIcon, RefreshCw, Rows3 } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { Folder, SavedItem } from "../api/types";
@@ -101,12 +100,15 @@ export function Library() {
     <div className="max-w-[1200px] mx-auto px-6 flex flex-col gap-4 relative">
       <div className="flex items-center justify-between gap-2 mb-2">
         <h2 className="font-heading text-text-primary text-2xl font-bold">Library</h2>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <ExpandableSearch value={query} onChange={setQuery} placeholder="Search titles, transcripts, and sources..." />
           <motion.button
             whileTap={{ scale: 0.95 }}
             onClick={() => setGrouped((g) => !g)}
             title={grouped ? "Show flat list" : "Group by folder"}
-            className="flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-accent transition-colors"
+            className={`flex items-center justify-center w-10 h-10 rounded-full bg-surface shrink-0 transition-colors ${
+              grouped ? "text-accent-ink" : "text-text-secondary hover:text-accent-ink"
+            }`}
           >
             {grouped ? <FolderIcon size={16} /> : <Rows3 size={16} />}
           </motion.button>
@@ -115,18 +117,14 @@ export function Library() {
             onClick={handleReorganize}
             disabled={reorganizing}
             title="Re-organize into folders now"
-            className="flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-accent disabled:opacity-50 transition-colors"
+            className="flex items-center justify-center w-10 h-10 rounded-full bg-surface shrink-0 text-text-secondary hover:text-accent-ink disabled:opacity-50 transition-colors"
           >
             <RefreshCw size={16} className={reorganizing ? "animate-spin" : ""} />
           </motion.button>
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <ExpandableSearch value={query} onChange={setQuery} placeholder="Search titles, transcripts, and sources..." />
-      </div>
-
-      <div className="flex gap-6 overflow-x-auto pb-1 border-b border-text-secondary/10">
+      <div className="flex gap-6 overflow-x-auto pb-1 border-b border-line">
         {FILTERS.map(({ id, label, Icon }) => {
           const isActive = filter === id;
           return (
@@ -134,7 +132,7 @@ export function Library() {
               key={id}
               onClick={() => setFilter(id)}
               className={`flex flex-col items-center gap-1 pb-2.5 border-b-2 shrink-0 transition-colors ${
-                isActive ? "border-accent text-accent" : "border-transparent text-text-secondary hover:text-text-primary"
+                isActive ? "border-accent text-accent-ink" : "border-transparent text-text-secondary hover:text-text-primary"
               }`}
             >
               <Icon size={18} strokeWidth={1.5} />
@@ -167,8 +165,8 @@ export function Library() {
           {sections.map((section) => (
             <div key={section.id} className="flex flex-col gap-3">
               <div className="flex items-center gap-2">
-                <FolderIcon size={16} className="text-accent" />
-                <h3 className="font-heading text-text-primary font-semibold">{section.name}</h3>
+                <FolderIcon size={16} className={section.id === UNSORTED_ID ? "text-text-secondary" : "text-accent-ink"} />
+                <h3 className="font-heading text-text-primary text-lg font-semibold">{section.name}</h3>
                 <span className="text-text-secondary text-xs">{section.items.length}</span>
               </div>
               <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -190,14 +188,6 @@ export function Library() {
           </AnimatePresence>
         </motion.div>
       )}
-
-      <Link
-        to="/save"
-        aria-label="Save new content"
-        className="fixed bottom-24 right-6 w-14 h-14 rounded-full bg-accent text-accent-contrast shadow-lg flex items-center justify-center z-40 hover:scale-105 active:scale-95 transition-transform"
-      >
-        <Plus size={26} />
-      </Link>
     </div>
   );
 }

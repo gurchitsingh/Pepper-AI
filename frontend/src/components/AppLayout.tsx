@@ -21,7 +21,7 @@ export function AppLayout() {
                 <User size={16} />
               )}
             </span>
-            <h1 className="font-heading text-text-primary text-lg font-semibold tracking-tight">Pepper AI</h1>
+            <h1 className="font-heading text-text-primary text-lg font-semibold tracking-tight">Pepper</h1>
           </Link>
         </div>
       </header>

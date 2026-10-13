@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Cropper, { type Area } from "react-easy-crop";
-import { X, User, LogOut, Mail, Lock, Key, Download, Check, Camera, Pencil } from "lucide-react";
+import { User, LogOut, Mail, Lock, KeyRound, Download, Check, Camera, Pencil, ChevronRight } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { THEMES } from "../theme/themes";
@@ -11,10 +11,11 @@ import { ApiError } from "../api/client";
 import { DURATION_ENTER, DURATION_EXIT, EASE_IN, EASE_OUT } from "../lib/motion";
 import { getCroppedImageBlob } from "../lib/cropImage";
 
-const EYEBROW = "text-accent text-[11px] font-semibold uppercase tracking-widest";
+const SHADOW_CARD = { boxShadow: "var(--shadow-card)" };
+const EYEBROW = "text-accent-ink text-[11px] font-semibold uppercase tracking-widest";
 const FIELD_LABEL = "text-[11px] font-semibold uppercase tracking-widest text-text-secondary";
 const FIELD_INPUT =
-  "bg-transparent border border-text-secondary/25 rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-colors";
+  "bg-transparent border border-line rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-colors";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -185,20 +186,11 @@ export function Settings() {
 
   return (
     <div className="max-w-lg mx-auto px-6 flex flex-col gap-10">
-      <div className="flex items-center justify-between -mt-2">
-        <h2 className="font-heading text-text-primary text-2xl font-bold">Settings</h2>
-        <button
-          onClick={() => navigate("/")}
-          aria-label="Close"
-          className="w-9 h-9 rounded-full flex items-center justify-center text-text-secondary hover:text-accent transition-colors"
-        >
-          <X size={20} />
-        </button>
-      </div>
+      <h2 className="font-heading text-text-primary text-2xl font-bold -mt-2">Settings</h2>
 
       <div className="flex flex-col items-center text-center gap-1">
         <div className="relative mb-2">
-          <span className="w-20 h-20 rounded-full bg-surface border border-text-secondary/15 flex items-center justify-center text-text-secondary overflow-hidden">
+          <span className="w-20 h-20 rounded-full bg-surface border border-line flex items-center justify-center text-text-secondary overflow-hidden">
             {avatarUrl ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" /> : <User size={32} />}
           </span>
           <button
@@ -239,7 +231,7 @@ export function Settings() {
                 whileTap={{ scale: 0.96 }}
                 onClick={() => setThemeId(t.id)}
                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-colors ${
-                  selected ? "border-accent bg-accent/5" : "border-text-secondary/15 bg-surface"
+                  selected ? "border-accent bg-tint" : "border-line bg-surface"
                 }`}
               >
                 <span
@@ -272,18 +264,18 @@ export function Settings() {
         {!user && !error && <p className="text-text-secondary text-sm">Loading...</p>}
 
         {user && !editingProfile && (
-          <div className="flex flex-col rounded-xl border border-text-secondary/15 bg-surface overflow-hidden">
-            <div className="flex items-center gap-3 px-4 py-3.5 border-b border-text-secondary/10">
+          <div className="flex flex-col rounded-xl border border-line bg-surface overflow-hidden" style={SHADOW_CARD}>
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-line">
               <User size={18} className="text-text-secondary shrink-0" />
               <div className="min-w-0">
                 <p className="text-text-secondary text-xs">Name</p>
                 <p className="text-text-primary text-sm truncate">{user.name || "Not set"}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-4 py-3.5">
+            <div className="flex items-center gap-3 px-4 py-3">
               <Mail size={18} className="text-text-secondary shrink-0" />
               <div className="min-w-0">
-                <p className="text-text-secondary text-xs">Email Address</p>
+                <p className="text-text-secondary text-xs">Email address</p>
                 <p className="text-text-primary text-sm truncate">{user.email}</p>
               </div>
             </div>
@@ -291,7 +283,7 @@ export function Settings() {
         )}
 
         {user && editingProfile && (
-          <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 bg-surface border border-text-secondary/15 rounded-xl p-4">
+          <form onSubmit={handleSaveProfile} className="flex flex-col gap-3 bg-surface border border-line rounded-xl p-4">
             {profileError && <p className="text-error text-sm">{profileError}</p>}
 
             <div className="flex flex-col gap-1.5">
@@ -325,7 +317,7 @@ export function Settings() {
                 type="button"
                 onClick={cancelEditingProfile}
                 disabled={savingProfile}
-                className="flex-grow h-11 rounded-full bg-transparent text-text-secondary border border-text-secondary/20 disabled:opacity-50"
+                className="flex-grow h-11 rounded-full bg-transparent text-text-secondary border border-line disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -343,18 +335,19 @@ export function Settings() {
 
       <section className="flex flex-col gap-3">
         <h3 className={EYEBROW}>Security</h3>
-        <div className="flex flex-col rounded-xl border border-text-secondary/15 bg-surface overflow-hidden">
-          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-text-secondary/10">
+        <div className="flex flex-col rounded-xl border border-line bg-surface overflow-hidden">
+          <div className="flex items-center gap-3 px-4 py-3.5 border-b border-line">
             <Lock size={18} className="text-text-secondary shrink-0" />
-            <span className="text-text-primary text-sm flex-grow">Two-Factor Authentication</span>
-            <span className="text-text-secondary text-xs font-semibold uppercase tracking-wide">Disabled</span>
+            <span className="text-text-primary text-sm flex-grow">Two-factor authentication</span>
+            <span className="text-text-secondary text-[11px] font-semibold uppercase tracking-wide">Disabled</span>
           </div>
           <button
             onClick={openChangePassword}
             className="flex items-center gap-3 px-4 py-3.5 text-left hover:bg-bg/40 transition-colors"
           >
-            <Key size={18} className="text-text-secondary shrink-0" />
-            <span className="text-text-primary text-sm">Change Password</span>
+            <KeyRound size={18} className="text-text-secondary shrink-0" />
+            <span className="text-text-primary text-sm flex-grow">Change password</span>
+            <ChevronRight size={18} className="text-text-secondary shrink-0" />
           </button>
         </div>
       </section>
@@ -363,10 +356,11 @@ export function Settings() {
         <h3 className={EYEBROW}>Data</h3>
         <button
           onClick={() => showNotice("Chat export isn't available yet.")}
-          className="flex items-center gap-3 bg-surface border border-text-secondary/15 rounded-xl px-4 py-3.5 text-left hover:bg-bg/40 transition-colors"
+          className="flex items-center gap-3 bg-surface border border-line rounded-xl px-4 py-3.5 text-left hover:bg-bg/40 transition-colors"
         >
           <Download size={18} className="text-text-secondary shrink-0" />
-          <span className="text-text-primary text-sm">Export Your Chat</span>
+          <span className="text-text-primary text-sm flex-grow">Export your chat</span>
+          <span className="text-text-secondary text-xs">Coming soon</span>
         </button>
       </section>
 

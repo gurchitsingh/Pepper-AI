@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { User } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { Insights as InsightsData, SavedItem } from "../api/types";
 import { SavedItemCard } from "../components/SavedItemCard";
+
+const SHADOW_CARD = { boxShadow: "var(--shadow-card)" };
 
 const CATEGORY_GROUPS: { id: string; label: string; color: string; match: (t: string) => boolean }[] = [
   { id: "notes", label: "Notes", color: "var(--accent)", match: (t) => t === "note" },
@@ -97,30 +100,46 @@ export function Insights() {
   }
 
   return (
-    <div className="max-w-[700px] mx-auto px-6 flex flex-col gap-8">
-      <section>
-        <h2 className="font-heading text-text-primary text-2xl font-semibold mb-1">Insights</h2>
-        <p className="text-text-secondary text-base">
-          {data.total_items} item{data.total_items === 1 ? "" : "s"} saved
-          {data.first_saved_at && <> since {formatDate(data.first_saved_at)}</>}.
-        </p>
+    <div className="max-w-[700px] mx-auto px-6 flex flex-col gap-6">
+      <section className="flex items-center gap-3">
+        <div className="flex-1 flex flex-col gap-1">
+          <h2 className="font-heading text-text-primary text-2xl font-bold">Insights</h2>
+          <p className="text-text-secondary text-base">
+            {data.total_items} item{data.total_items === 1 ? "" : "s"} saved
+            {data.first_saved_at && <> since {formatDate(data.first_saved_at)}</>}.
+          </p>
+        </div>
+        <Link
+          to="/settings"
+          aria-label="Settings"
+          className="w-10 h-10 shrink-0 rounded-full bg-surface border border-line flex items-center justify-center text-text-secondary"
+        >
+          <User size={18} />
+        </Link>
       </section>
 
-      <section className="grid grid-cols-3 gap-3">
+      <section className="grid grid-cols-3 gap-2.5">
         {[
-          { label: "Ready", value: data.ready_items },
-          { label: "Processing", value: data.processing_items },
-          { label: "Failed", value: data.failed_items },
+          { label: "Ready", value: data.ready_items, dot: "var(--color-success)" },
+          { label: "Processing", value: data.processing_items, dot: "var(--accent)" },
+          { label: "Failed", value: data.failed_items, dot: "var(--color-error)" },
         ].map((stat) => (
-          <div key={stat.label} className="glass-card rounded-2xl p-4 flex flex-col items-center gap-1">
+          <div
+            key={stat.label}
+            className="bg-surface border border-line rounded-2xl p-3.5 flex flex-col items-center gap-1.5"
+            style={SHADOW_CARD}
+          >
             <span className="font-heading text-text-primary text-2xl font-bold">{stat.value}</span>
-            <span className="text-text-secondary text-xs uppercase tracking-wide">{stat.label}</span>
+            <span className="flex items-center gap-1.5 text-text-secondary text-[11px] font-medium uppercase tracking-wide">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: stat.dot }} />
+              {stat.label}
+            </span>
           </div>
         ))}
       </section>
 
-      <section className="flex flex-col md:flex-row items-center gap-8">
-        <div className="w-52 h-52 shrink-0 relative">
+      <section className="bg-surface border border-line rounded-2xl p-4 flex items-center gap-4" style={SHADOW_CARD}>
+        <div className="w-32 h-32 shrink-0 relative">
           <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
             <circle cx="50" cy="50" r={RING_R} fill="none" stroke="var(--text-secondary)" strokeOpacity="0.12" strokeWidth="8" />
             {categories
@@ -146,21 +165,16 @@ export function Insights() {
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span className="font-heading text-text-primary text-2xl font-semibold">{data.total_items}</span>
-            <span className="text-text-secondary text-[11px] uppercase tracking-widest">Items</span>
+            <span className="text-text-secondary text-[10px] uppercase tracking-widest">Items</span>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 w-full">
+        <div className="flex flex-col gap-3 w-full">
           {categories.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center justify-between px-4 py-3 bg-surface border border-text-secondary/15 rounded-lg"
-            >
-              <div className="flex items-center gap-3">
-                <span className="w-3 h-3 rounded-full shrink-0" style={{ background: c.color }} />
-                <span className="text-text-primary text-sm">{c.label}</span>
-              </div>
-              <span className="text-text-secondary text-sm">{c.count} items</span>
+            <div key={c.id} className="flex items-center gap-2.5">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+              <span className="flex-1 text-text-primary text-sm">{c.label}</span>
+              <span className="text-text-secondary text-sm">{c.count}</span>
             </div>
           ))}
         </div>
@@ -169,24 +183,46 @@ export function Insights() {
       {folderRows.length > 0 && (
         <section className="flex flex-col gap-3">
           <h3 className="font-heading text-text-primary text-lg font-semibold">By folder</h3>
-          <div className="glass-card rounded-2xl p-4 flex flex-col gap-3">
-            {folderRows.map((folder) => (
-              <div
-                key={folder.folder_id ?? "unsorted"}
-                className="flex items-center justify-between px-4 py-3 bg-surface border border-text-secondary/15 rounded-lg"
-              >
-                <span className="text-text-primary text-sm truncate">{folder.folder_name}</span>
-                <span className="text-text-secondary text-sm">{folder.count} items</span>
-              </div>
-            ))}
+          <div className="bg-surface border border-line rounded-2xl px-4 flex flex-col" style={SHADOW_CARD}>
+            {folderRows.map((folder, i) => {
+              const maxCount = Math.max(...folderRows.map((f) => f.count), 1);
+              const pct = Math.round((folder.count / maxCount) * 100);
+              const unsorted = folder.folder_id === null;
+              return (
+                <div
+                  key={folder.folder_id ?? "unsorted"}
+                  className={`flex flex-col gap-2 py-3 ${i < folderRows.length - 1 ? "border-b border-line" : ""}`}
+                >
+                  <div className="flex items-center justify-between text-sm">
+                    <span className={unsorted ? "text-text-secondary" : "text-text-primary"}>
+                      {folder.folder_name}
+                    </span>
+                    <span className="text-text-secondary">
+                      {folder.count} item{folder.count === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="h-1 rounded-full bg-tint overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${pct}%`, background: unsorted ? "var(--text-secondary)" : "var(--accent)" }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
       )}
 
-      <section className="p-5 bg-surface border border-text-secondary/15 rounded-xl">
-        <h3 className="text-text-secondary text-[11px] font-semibold uppercase tracking-widest mb-4">
-          Last {data.trend.length} days
-        </h3>
+      <section className="bg-surface border border-line rounded-2xl p-4 flex flex-col gap-3.5" style={SHADOW_CARD}>
+        <div className="flex items-baseline justify-between">
+          <h3 className="text-text-secondary text-[11px] font-semibold uppercase tracking-widest">
+            Last {data.trend.length} days
+          </h3>
+          <span className="text-text-secondary text-xs">
+            {data.trend.reduce((sum, t) => sum + t.count, 0)} saves
+          </span>
+        </div>
         <div className="h-28 w-full">
           <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full overflow-visible">
             <line
@@ -210,18 +246,23 @@ export function Insights() {
             />
           </svg>
         </div>
-        <div className="flex justify-between mt-3 text-text-secondary text-[9px]">
-          {data.trend.map((point) => (
-            <span key={point.date}>{new Date(`${point.date}T00:00:00`).getDate()}</span>
+        <div className="flex justify-between text-text-secondary text-[10px] tabular-nums">
+          {data.trend.map((point, i) => (
+            <span
+              key={point.date}
+              className={i === data.trend.length - 1 ? "text-accent-ink font-semibold" : undefined}
+            >
+              {new Date(`${point.date}T00:00:00`).getDate()}
+            </span>
           ))}
         </div>
       </section>
 
       <section className="flex flex-col gap-3 pb-4">
-        <div className="flex items-center justify-between">
-          <h3 className="font-heading text-text-primary text-lg font-semibold">Recent Activity</h3>
-          <Link to="/library" className="text-accent text-sm hover:underline">
-            View All
+        <div className="flex items-baseline justify-between">
+          <h3 className="font-heading text-text-primary text-lg font-semibold">Recent activity</h3>
+          <Link to="/library" className="text-accent-ink text-sm font-medium hover:underline">
+            View all
           </Link>
         </div>
         {recent.length === 0 && items !== null && <p className="text-text-secondary text-sm">Nothing saved yet.</p>}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, animate, motion } from "framer-motion";
 import { Send, FileText, Link2, Mic, FileImage, Plus, ChevronDown } from "lucide-react";
 import * as api from "../api/endpoints";
@@ -28,24 +29,45 @@ const TYPE_ICON: Record<string, typeof FileText> = {
 
 const NEAR_BOTTOM_THRESHOLD_PX = 80;
 
+const TYPE_LABEL: Record<string, string> = {
+  note: "Note",
+  article: "Article",
+  youtube: "YouTube",
+  voice_note: "Voice note",
+  document: "Document",
+  instagram: "Reel",
+  tiktok: "Reel",
+};
+
+function formatTimestamp(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 function SourceCard({ source }: { source: ChatSource }) {
   const [expanded, setExpanded] = useState(false);
   const Icon = TYPE_ICON[source.source_type] ?? FileText;
+  const typeLabel = TYPE_LABEL[source.source_type] ?? source.source_type;
+  const metaLine = source.start_time != null ? `${typeLabel} · at ${formatTimestamp(source.start_time)}` : typeLabel;
 
   return (
     <motion.button
       layout
-      whileTap={{ scale: 0.97 }}
+      whileTap={{ scale: 0.98 }}
       onClick={() => setExpanded((e) => !e)}
-      className="bg-surface border border-text-secondary/15 hover:border-accent/40 rounded-xl p-3 text-left w-full flex flex-col gap-1 transition-colors"
+      className="bg-surface border border-line hover:border-accent/40 rounded-xl px-3 py-2.5 text-left w-full flex flex-col gap-1.5 transition-colors"
     >
-      <div className="flex items-center gap-2">
-        <span className="w-7 h-7 rounded-full bg-bg flex items-center justify-center shrink-0">
-          <Icon size={13} className="text-accent" />
+      <div className="flex items-center gap-2.5">
+        <span className="w-7 h-7 rounded-full bg-bg flex items-center justify-center shrink-0 text-accent-ink">
+          <Icon size={14} />
         </span>
-        <span className="text-text-primary text-sm font-medium truncate">
-          {source.title || `${source.source_type} item`}
-        </span>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <span className="text-text-primary text-[13px] font-medium truncate">
+            {source.title || `${source.source_type} item`}
+          </span>
+          <span className="text-text-secondary text-xs">{metaLine}</span>
+        </div>
       </div>
       <AnimatePresence>
         {expanded && (
@@ -65,6 +87,8 @@ function SourceCard({ source }: { source: ChatSource }) {
 
 export function Chatbot() {
   const { messages, setMessages, newSession } = useChat();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [savedItems, setSavedItems] = useState<SavedItem[]>([]);
@@ -93,6 +117,14 @@ export function Chatbot() {
       .then((res) => setContentSuggestions(res.questions))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const prefillQuestion = (location.state as { prefillQuestion?: string } | null)?.prefillQuestion;
+    if (!prefillQuestion) return;
+    navigate(location.pathname, { replace: true, state: null });
+    submitQuestion(prefillQuestion);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   function smoothScrollToBottom(el: HTMLDivElement) {
     autoScrollingRef.current = true;
@@ -304,6 +336,9 @@ export function Chatbot() {
                     )}
                     {m.sources && m.sources.length > 0 && (
                       <div className="flex flex-col gap-2 max-w-[85%] w-full">
+                        <span className="text-text-secondary text-[11px] font-medium uppercase tracking-widest">
+                          From {m.sources.length} of your saves
+                        </span>
                         {m.sources.map((s, i) => (
                           <SourceCard key={`${m.id}-${i}`} source={s} />
                         ))}
