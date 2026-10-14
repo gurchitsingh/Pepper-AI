@@ -72,6 +72,12 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/profile-picture-crop/frontend && npm run dev -- --port 3102 --strictPort"],
       "port": 3102
+    },
+    {
+      "name": "fix-redesign-fidelity-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-wt/fix-redesign-fidelity/frontend && npm run dev -- --port 3104 --strictPort"],
+      "port": 3104
     }
   ]
 }
