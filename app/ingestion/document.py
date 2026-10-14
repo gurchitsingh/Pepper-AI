@@ -84,8 +84,11 @@ def _extract_text_file(path: str) -> str:
 
 
 def _extract_pdf(path: str) -> str:
-    reader = PdfReader(path)
-    pages = [page.extract_text() or "" for page in reader.pages]
+    try:
+        reader = PdfReader(path)
+        pages = [page.extract_text() or "" for page in reader.pages]
+    except Exception as e:
+        raise IngestionError(f"This PDF is corrupt or unreadable: {e}") from e
     return "\n".join(pages)
 
 
@@ -97,7 +100,10 @@ def _ocr_pdf(path: str, lang: str = "eng+hin") -> str:
     """
     _ensure_tesseract(lang)
     texts = []
-    pdf = pdfium.PdfDocument(path)
+    try:
+        pdf = pdfium.PdfDocument(path)
+    except Exception as e:
+        raise IngestionError(f"This PDF is corrupt or unreadable: {e}") from e
     try:
         for page in pdf:
             image = page.render(scale=300 / 72).to_pil()
@@ -109,8 +115,11 @@ def _ocr_pdf(path: str, lang: str = "eng+hin") -> str:
 
 
 def _extract_docx(path: str) -> str:
-    doc = DocxDocument(path)
-    paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    try:
+        doc = DocxDocument(path)
+        paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+    except Exception as e:
+        raise IngestionError(f"This DOCX file is corrupt or unreadable: {e}") from e
     return "\n".join(paragraphs)
 
 
@@ -120,8 +129,11 @@ def _ocr_image(path: str, lang: str = "eng+hin") -> str:
     to produce empty output here -- that's not an error, see process_uploaded_document.
     """
     _ensure_tesseract(lang)
-    image = Image.open(path)
-    image.load()
+    try:
+        image = Image.open(path)
+        image.load()
+    except Exception as e:
+        raise IngestionError(f"This image is corrupt or unreadable: {e}") from e
     # pytesseract only recognizes a handful of image.format values (PNG/JPEG/etc) and
     # rejects anything else outright -- clearing it makes it fall back to PNG, which
     # works for any decoded image regardless of source format (e.g. HEIC).

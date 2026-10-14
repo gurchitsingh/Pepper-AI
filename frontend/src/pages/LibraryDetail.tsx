@@ -34,6 +34,9 @@ export function LibraryDetail() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+
   useEffect(() => {
     if (!id) return;
     api
@@ -69,6 +72,17 @@ export function LibraryDetail() {
         setDeleting(false);
         setConfirmingDelete(false);
       });
+  }
+
+  function handleRetry() {
+    if (!id) return;
+    setRetrying(true);
+    setRetryError(null);
+    api
+      .retrySavedItem(id)
+      .then(setItem)
+      .catch((err) => setRetryError(err instanceof ApiError ? err.message : "Failed to retry"))
+      .finally(() => setRetrying(false));
   }
 
   function startEditing() {
@@ -186,7 +200,19 @@ export function LibraryDetail() {
             </a>
           )}
 
-          {item.failure_reason && <p className="text-error text-sm">{item.failure_reason}</p>}
+          {item.failure_reason && (
+            <div className="flex flex-col gap-2">
+              <p className="text-error text-sm">{item.failure_reason}</p>
+              {retryError && <p className="text-error text-sm">{retryError}</p>}
+              <button
+                onClick={handleRetry}
+                disabled={retrying}
+                className="self-start h-9 px-4 rounded-full bg-accent text-accent-contrast text-sm font-medium disabled:opacity-50"
+              >
+                {retrying ? "Retrying..." : "Retry"}
+              </button>
+            </div>
+          )}
 
           {item.source_type === "voice_note" && (
             audioUrl ? (

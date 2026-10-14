@@ -26,12 +26,21 @@ def embed_texts(texts: list[str], input_type: str = "document") -> list[list[flo
             "and add it to .env before embeddings can be generated."
         )
 
-    response = requests.post(
-        VOYAGE_EMBED_URL,
-        headers={"Authorization": f"Bearer {VOYAGE_API_KEY}", "Content-Type": "application/json"},
-        json={"model": VOYAGE_MODEL, "input": texts, "input_type": input_type},
-        timeout=30,
-    )
+    try:
+        response = requests.post(
+            VOYAGE_EMBED_URL,
+            headers={"Authorization": f"Bearer {VOYAGE_API_KEY}", "Content-Type": "application/json"},
+            json={"model": VOYAGE_MODEL, "input": texts, "input_type": input_type},
+            timeout=30,
+        )
+    except requests.exceptions.RequestException as e:
+        # Network-level failures (DNS, timeout, connection refused) must become
+        # EmbeddingError too, same as a non-200 response -- callers (ingestion's
+        # store_chunks in particular) only catch EmbeddingError and treat it as a
+        # soft failure; letting this escape as a raw requests exception instead
+        # crashes the caller outright (e.g. leaves an ingestion job stuck in
+        # "processing" with no failure_reason).
+        raise EmbeddingError(f"Voyage AI API request failed: {e}") from e
     if response.status_code != 200:
         raise EmbeddingError(f"Voyage AI API returned {response.status_code}: {response.text[:500]}")
 

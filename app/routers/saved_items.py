@@ -24,7 +24,10 @@ router = APIRouter(prefix="/saved-items", tags=["saved-items"])
 
 SEMANTIC_SEARCH_TOP_K = 20
 
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "./uploads")
+# Resolved to an absolute path: uploaded_file_path is read back by the RQ worker, a
+# separate process that isn't guaranteed to share this process's cwd -- a relative
+# path here silently breaks ingestion ("file not found") whenever it doesn't.
+UPLOAD_DIR = os.path.abspath(os.getenv("UPLOAD_DIR", "./uploads"))
 UPLOAD_SOURCE_TYPES = {"instagram", "tiktok", "voice_note", "document"}
 
 AUDIO_MIME_TYPES = {
@@ -131,6 +134,25 @@ def upload_saved_item(
         status="pending",
     )
     db.add(item)
+    db.commit()
+    db.refresh(item)
+
+    ingestion_queue.enqueue(process_saved_item, str(item.id))
+    return _to_out(item, None)
+
+
+@router.post("/{item_id}/retry", response_model=SavedItemOut)
+def retry_saved_item(
+    item_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    item = _fetch_owned_item(db, item_id, current_user)
+    if item.status != "failed":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only failed items can be retried")
+
+    item.status = "pending"
+    item.failure_reason = None
     db.commit()
     db.refresh(item)
 

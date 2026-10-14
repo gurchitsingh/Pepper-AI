@@ -104,6 +104,10 @@ export function deleteSavedItem(id: string) {
   return apiFetch<void>(`/saved-items/${id}`, { method: "DELETE" });
 }
 
+export function retrySavedItem(id: string) {
+  return apiFetch<SavedItem>(`/saved-items/${id}/retry`, { method: "POST" });
+}
+
 export function updateSavedItem(id: string, payload: { title?: string | null; content?: string }) {
   return apiFetch<SavedItem>(`/saved-items/${id}`, {
     method: "PATCH",
