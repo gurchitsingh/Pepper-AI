@@ -7,7 +7,10 @@
   --text-primary: #f2eee9;
   --text-secondary: #a39c93;
   --accent: #f08a3c;
+  --accent-ink: #f08a3c;
   --accent-contrast: #171310;
+  --tint: rgba(240, 138, 60, 0.14);
+  --line: rgba(242, 238, 233, 0.08);
 }
 
 /* Light mode: Warm cream + orange accent (same accent as dark mode) */
@@ -17,7 +20,10 @@
   --text-primary: #1e2a1e;
   --text-secondary: #6e7a6a;
   --accent: #f08a3c;
+  --accent-ink: #a9531b;
   --accent-contrast: #171310;
+  --tint: rgba(240, 138, 60, 0.16);
+  --line: rgba(30, 42, 30, 0.1);
 }
 
 @theme inline {
@@ -26,7 +32,10 @@
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-accent-contrast: var(--accent-contrast);
+  --color-tint: var(--tint);
+  --color-line: var(--line);
   /* Semantic status colors: fixed across themes so state stays recognizable */
   --color-error: #e5484d;
   --color-success: #2f9e5b;

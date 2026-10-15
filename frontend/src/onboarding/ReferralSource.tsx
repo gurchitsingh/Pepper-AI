@@ -1,15 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Briefcase, Search, PlayCircle, Zap, MessageSquare, Globe } from "lucide-react";
+import { Camera, Users, Ticket, CirclePlay, Briefcase, Search, Sparkles, Ellipsis } from "lucide-react";
 import { setOnboarded } from "./onboardingStatus";
 
 const SOURCES = [
+  { label: "Instagram", desc: "Reels and stories", Icon: Camera },
+  { label: "A friend or classmate", desc: "Word of mouth", Icon: Users },
+  { label: "College club or fest", desc: "Talks, stalls and posters", Icon: Ticket },
+  { label: "YouTube", desc: "Videos and reviews", Icon: CirclePlay },
   { label: "LinkedIn", desc: "Professional network", Icon: Briefcase },
   { label: "Google", desc: "Search & Discovery", Icon: Search },
-  { label: "YouTube", desc: "Visual reviews", Icon: PlayCircle },
-  { label: "Claude", desc: "AI Recommendations", Icon: Zap },
-  { label: "ChatGPT", desc: "Conversation discovery", Icon: MessageSquare },
-  { label: "Internet", desc: "Blogs & Articles", Icon: Globe },
+  { label: "ChatGPT or Claude", desc: "AI recommendations", Icon: Sparkles },
+  { label: "Other", desc: "Somewhere else", Icon: Ellipsis },
 ] as const;
 
 export function ReferralSource() {
