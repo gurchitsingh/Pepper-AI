@@ -53,7 +53,7 @@ export function SavedItemCard({ item }: { item: SavedItem }) {
     >
       <Link
         to={`/library/${item.id}`}
-        className="group bg-surface border border-text-secondary/15 rounded-xl overflow-hidden hover:border-accent/50 transition-colors flex flex-col p-4 gap-3 h-full"
+        className="group glass-card rounded-2xl overflow-hidden hover:border-accent/50 transition-colors flex flex-col p-4 gap-3 h-full"
       >
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">

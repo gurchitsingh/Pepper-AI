@@ -1,21 +1,16 @@
 @import "tailwindcss";
 
-/* Dark mode (default): Orange + Black */
+/* Dark mode (default), mirrored from THEMES[0] in theme/themes.ts.
+   This is the only place theme colors are duplicated: it exists purely so
+   the page paints correctly before React mounts. Every theme (including
+   this one, once mounted) is applied from themes.ts via ThemeContext's
+   applyThemeColors, which is the single source of truth for color values —
+   update themes.ts, not this block, when a color changes. */
 :root {
   --bg: #121212;
   --surface: #201c1a;
   --text-primary: #f2eee9;
   --text-secondary: #a39c93;
-  --accent: #f08a3c;
-  --accent-contrast: #171310;
-}
-
-/* Light mode: Warm cream + orange accent (same accent as dark mode) */
-[data-theme="light"] {
-  --bg: #f7f3e9;
-  --surface: #ffffff;
-  --text-primary: #1e2a1e;
-  --text-secondary: #6e7a6a;
   --accent: #f08a3c;
   --accent-contrast: #171310;
 }
