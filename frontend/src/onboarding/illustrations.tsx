@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
-import { Brain, Clapperboard, AudioLines, FileText, PenLine } from "lucide-react";
+import { Clapperboard, AudioLines, FileText, PenLine } from "lucide-react";
+import { Mark } from "../components/Mark";
 
 function Blob({ children }: { children: ReactNode }) {
   return (
@@ -43,7 +44,7 @@ function FloatingPill({
 export function MeetPepperIllustration() {
   return (
     <Blob>
-      <IconBubble Icon={Brain} />
+      <Mark size={120} className="shadow-[0_18px_40px_-16px_rgba(0,0,0,0.45)]" />
     </Blob>
   );
 }

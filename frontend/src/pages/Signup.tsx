@@ -4,6 +4,7 @@ import { useAuth } from "../auth/AuthContext";
 import { GoogleSignInButton } from "../auth/GoogleSignInButton";
 import { ApiError } from "../api/client";
 import { isOnboarded } from "../onboarding/onboardingStatus";
+import { Mark } from "../components/Mark";
 
 const FIELD_LABEL = "text-[11px] font-semibold uppercase tracking-widest text-text-secondary";
 const FIELD_INPUT =
@@ -47,7 +48,8 @@ export function Signup() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-bg">
       <div className="w-full max-w-sm flex flex-col gap-8">
-        <div className="text-center">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Mark size={64} />
           <h1 className="font-heading text-text-primary text-4xl font-semibold">Pepper AI</h1>
           <p className="text-text-secondary text-xs font-semibold uppercase tracking-[0.2em] mt-2">
             Create your account

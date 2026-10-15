@@ -12,6 +12,7 @@ import { ThinkingIndicator } from "../components/ThinkingIndicator";
 import { CompleteIndicator } from "../components/CompleteIndicator";
 import { MarkdownMessage } from "../components/MarkdownMessage";
 import { ExpandableSearch } from "../components/ExpandableSearch";
+import { Mark } from "../components/Mark";
 import { EASE_OUT } from "../lib/motion";
 
 const COMPLETE_INDICATOR_FADE_MS = 1700;
@@ -305,13 +306,16 @@ export function Chatbot() {
           ) : (
             <>
               {messages.length === 0 && (
-                <div className="glass-card rounded-2xl p-5 flex flex-col gap-2">
-                  <p className="font-heading text-text-primary text-lg font-semibold">
-                    {timeOfDayGreeting()} I'm Pepper.
-                  </p>
-                  <p className="text-text-secondary text-sm">
-                    Ask me anything about what you've saved, or just say hello — I'm around either way.
-                  </p>
+                <div className="flex items-start gap-3">
+                  <Mark size={32} className="shrink-0 mt-0.5" />
+                  <div className="glass-card rounded-2xl p-5 flex flex-col gap-2 min-w-0">
+                    <p className="font-heading text-text-primary text-lg font-semibold">
+                      {timeOfDayGreeting()} I'm Pepper.
+                    </p>
+                    <p className="text-text-secondary text-sm">
+                      Ask me anything about what you've saved, or just say hello — I'm around either way.
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -322,28 +326,31 @@ export function Chatbot() {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.25 }}
-                    className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
+                    className={`flex ${m.role === "user" ? "justify-end" : "items-start gap-3"}`}
                   >
-                    {m.role === "user" ? (
-                      <div className="rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast">
-                        {m.content}
-                      </div>
-                    ) : (
-                      <MarkdownMessage content={m.content} />
-                    )}
-                    {m.role === "assistant" && justCompletedId === m.id && (
-                      <CompleteIndicator fading={completeFading} />
-                    )}
-                    {m.sources && m.sources.length > 0 && (
-                      <div className="flex flex-col gap-2 max-w-[85%] w-full">
-                        <span className="text-text-secondary text-[11px] font-medium uppercase tracking-widest">
-                          From {m.sources.length} of your saves
-                        </span>
-                        {m.sources.map((s, i) => (
-                          <SourceCard key={`${m.id}-${i}`} source={s} />
-                        ))}
-                      </div>
-                    )}
+                    {m.role === "assistant" && <Mark size={32} className="shrink-0 mt-0.5" />}
+                    <div className={`flex flex-col gap-2 min-w-0 ${m.role === "user" ? "items-end" : "items-start"}`}>
+                      {m.role === "user" ? (
+                        <div className="rounded-2xl px-4 py-3 max-w-[85%] bg-accent text-accent-contrast">
+                          {m.content}
+                        </div>
+                      ) : (
+                        <MarkdownMessage content={m.content} />
+                      )}
+                      {m.role === "assistant" && justCompletedId === m.id && (
+                        <CompleteIndicator fading={completeFading} />
+                      )}
+                      {m.sources && m.sources.length > 0 && (
+                        <div className="flex flex-col gap-2 max-w-[85%] w-full">
+                          <span className="text-text-secondary text-[11px] font-medium uppercase tracking-widest">
+                            From {m.sources.length} of your saves
+                          </span>
+                          {m.sources.map((s, i) => (
+                            <SourceCard key={`${m.id}-${i}`} source={s} />
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -357,7 +364,7 @@ export function Chatbot() {
                     exit={{ opacity: 0, y: -6, transition: { duration: 0.15 } }}
                     transition={{ duration: 0.25 }}
                   >
-                    <ThinkingIndicator />
+                    <ThinkingIndicator savedCount={savedItems.length} />
                   </motion.div>
                 )}
               </AnimatePresence>

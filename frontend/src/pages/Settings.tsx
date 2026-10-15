@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Cropper, { type Area } from "react-easy-crop";
 import { User, LogOut, Mail, Lock, KeyRound, Download, Check, Camera, Pencil, ChevronRight } from "lucide-react";
+import { Mark } from "../components/Mark";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { THEMES } from "../theme/themes";
@@ -386,7 +387,10 @@ export function Settings() {
         Sign out of Pepper AI
       </motion.button>
 
-      <p className="text-text-secondary/50 text-xs text-center -mt-6">Built with intention.</p>
+      <div className="flex flex-col items-center gap-2 -mt-2">
+        <Mark size={28} />
+        <p className="text-text-secondary/50 text-xs text-center">Pepper AI &middot; Built with intention.</p>
+      </div>
 
       <AnimatePresence>
         {confirmingLogout && (
