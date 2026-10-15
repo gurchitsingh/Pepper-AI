@@ -11,6 +11,7 @@ import { AppLayout } from "./components/AppLayout";
 import { Landing } from "./pages/Landing";
 import { Login } from "./pages/Login";
 import { Signup } from "./pages/Signup";
+import { VerifyEmail } from "./pages/VerifyEmail";
 import { Home } from "./pages/Home";
 import { Save } from "./pages/Save";
 import { Library } from "./pages/Library";
@@ -19,18 +20,38 @@ import { Chatbot } from "./pages/Chatbot";
 import { Settings } from "./pages/Settings";
 import { Insights } from "./pages/Insights";
 
-function RequireAuth({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+// Gate for authenticated routes that require a verified email (preferences, referral,
+// and the main app). Waits for the user profile to load before deciding, so a page
+// refresh doesn't briefly bounce a verified user to /verify-email.
+function RequireVerified({ children }: { children: ReactNode }) {
+  const { isAuthenticated, user, userLoading } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (userLoading) return null;
+  if (user && !user.email_verified) return <Navigate to="/verify-email" replace />;
   return <>{children}</>;
 }
 
 function RequireOnboarded({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
-  if (!isOnboarded()) {
-    return <Navigate to={isAuthenticated ? "/preferences" : "/slides"} replace />;
+  const { isAuthenticated, user, userLoading } = useAuth();
+  if (!isAuthenticated) {
+    return <Navigate to={isOnboarded() ? "/login" : "/slides"} replace />;
   }
+  if (userLoading) return null;
+  if (user && !user.email_verified) return <Navigate to="/verify-email" replace />;
+  const onboarded = (user?.onboarding_completed ?? false) || isOnboarded();
+  if (!onboarded) return <Navigate to="/preferences" replace />;
+  return <>{children}</>;
+}
+
+// Keeps a verified, already-onboarded user from getting stuck on /verify-email.
+function RequireUnverified({ children }: { children: ReactNode }) {
+  const { isAuthenticated, user, userLoading } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (userLoading) return null;
+  if (user && user.email_verified) {
+    const onboarded = (user.onboarding_completed ?? false) || isOnboarded();
+    return <Navigate to={onboarded ? "/" : "/preferences"} replace />;
+  }
   return <>{children}</>;
 }
 
@@ -46,19 +67,27 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route
+                path="/verify-email"
+                element={
+                  <RequireUnverified>
+                    <VerifyEmail />
+                  </RequireUnverified>
+                }
+              />
+              <Route
                 path="/preferences"
                 element={
-                  <RequireAuth>
+                  <RequireVerified>
                     <Preferences />
-                  </RequireAuth>
+                  </RequireVerified>
                 }
               />
               <Route
                 path="/source"
                 element={
-                  <RequireAuth>
+                  <RequireVerified>
                     <ReferralSource />
-                  </RequireAuth>
+                  </RequireVerified>
                 }
               />
               <Route

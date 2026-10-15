@@ -4,6 +4,8 @@ import shutil
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.auth import (
@@ -11,14 +13,27 @@ from app.auth import (
     find_or_create_oauth_user,
     get_current_user,
     hash_password,
+    validate_and_normalize_email,
     verify_apple_token,
     verify_google_token,
     verify_password,
 )
 from app.database import get_db
-from app.models.models import User
+from app.email_service import send_verification_code_email
+from app.models.models import User, utcnow
 from app.rate_limit import limiter
-from app.schemas import OAuthLogin, PasswordChange, Token, UserLogin, UserOut, UserSignup, UserUpdate
+from app.schemas import (
+    OAuthLogin,
+    PasswordChange,
+    ResendCodeRequest,
+    Token,
+    UserLogin,
+    UserOut,
+    UserSignup,
+    UserUpdate,
+    VerifyEmailRequest,
+)
+from app.verification import issue_verification_code, verify_code
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -44,17 +59,47 @@ def update_me(
     db: Session = Depends(get_db),
 ):
     updates = payload.model_dump(exclude_unset=True)
+    needs_reverification = False
 
-    if "email" in updates and updates["email"] != current_user.email:
-        if db.query(User).filter(User.email == updates["email"], User.id != current_user.id).first():
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
-        current_user.email = updates["email"]
+    if "email" in updates and updates["email"] is not None:
+        new_email = validate_and_normalize_email(updates["email"])
+        if new_email != current_user.email:
+            if db.query(User).filter(User.email == new_email, User.id != current_user.id).first():
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+            current_user.email = new_email
+            current_user.email_verified = False
+            current_user.email_verified_at = None
+            needs_reverification = True
+
+    if "username" in updates and updates["username"] is not None:
+        new_username = updates["username"]
+        if new_username.lower() != current_user.username.lower():
+            if db.query(User).filter(func.lower(User.username) == new_username.lower(), User.id != current_user.id).first():
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
+            current_user.username = new_username
 
     if "name" in updates:
         current_user.name = updates["name"]
+    if "theme" in updates:
+        current_user.theme_preference = updates["theme"]
+    if "interests" in updates:
+        current_user.interests = updates["interests"]
+    if "referral_source" in updates:
+        current_user.referral_source = updates["referral_source"]
+    if "onboarding_completed" in updates and updates["onboarding_completed"] is not None:
+        current_user.onboarding_completed = updates["onboarding_completed"]
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email or username already registered")
     db.refresh(current_user)
+
+    if needs_reverification:
+        code = issue_verification_code(db, current_user)
+        send_verification_code_email(current_user.email, code)
+
     return current_user
 
 
@@ -97,25 +142,84 @@ def get_avatar(current_user: User = Depends(get_current_user)):
 @router.post("/signup", response_model=Token, status_code=status.HTTP_201_CREATED)
 @limiter.limit("5/minute")
 def signup(request: Request, payload: UserSignup, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.email == payload.email).first():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+    email = validate_and_normalize_email(payload.email)
 
-    user = User(email=payload.email, name=payload.name, hashed_password=hash_password(payload.password))
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
+    if db.query(User).filter(func.lower(User.username) == payload.username.lower()).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
+
+    user = User(
+        email=email,
+        username=payload.username,
+        name=payload.name,
+        hashed_password=hash_password(payload.password),
+        auth_provider="password",
+        email_verified=False,
+    )
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email or username already registered")
     db.refresh(user)
 
-    return Token(access_token=create_access_token(user.id))
+    code = issue_verification_code(db, user)
+    send_verification_code_email(user.email, code)
+
+    return Token(
+        access_token=create_access_token(user.id),
+        email_verified=user.email_verified,
+        onboarding_completed=user.onboarding_completed,
+    )
 
 
 @router.post("/login", response_model=Token)
 @limiter.limit("5/minute")
 def login(request: Request, payload: UserLogin, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == payload.email).first()
+    email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
     if not user or not user.hashed_password or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
 
-    return Token(access_token=create_access_token(user.id))
+    user.last_login_at = utcnow()
+    db.commit()
+
+    return Token(
+        access_token=create_access_token(user.id),
+        email_verified=user.email_verified,
+        onboarding_completed=user.onboarding_completed,
+    )
+
+
+@router.post("/verify-email", response_model=Token)
+@limiter.limit("10/minute")
+def verify_email(request: Request, payload: VerifyEmailRequest, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Incorrect code.")
+
+    verify_code(db, user, payload.code)
+
+    return Token(
+        access_token=create_access_token(user.id),
+        email_verified=user.email_verified,
+        onboarding_completed=user.onboarding_completed,
+    )
+
+
+@router.post("/resend-verification", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("3/minute")
+def resend_verification(request: Request, payload: ResendCodeRequest, db: Session = Depends(get_db)):
+    email = payload.email.strip().lower()
+    user = db.query(User).filter(User.email == email).first()
+    if not user or user.email_verified:
+        return
+
+    code = issue_verification_code(db, user)
+    send_verification_code_email(user.email, code)
 
 
 @router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
@@ -142,8 +246,13 @@ def google_login(payload: OAuthLogin, db: Session = Depends(get_db)):
         provider_id=claims["sub"],
         email=claims.get("email"),
         name=claims.get("name"),
+        picture=claims.get("picture"),
     )
-    return Token(access_token=create_access_token(user.id))
+    return Token(
+        access_token=create_access_token(user.id),
+        email_verified=user.email_verified,
+        onboarding_completed=user.onboarding_completed,
+    )
 
 
 @router.post("/apple", response_model=Token)
@@ -155,4 +264,8 @@ def apple_login(payload: OAuthLogin, db: Session = Depends(get_db)):
         provider_id=claims["sub"],
         email=claims.get("email"),
     )
-    return Token(access_token=create_access_token(user.id))
+    return Token(
+        access_token=create_access_token(user.id),
+        email_verified=user.email_verified,
+        onboarding_completed=user.onboarding_completed,
+    )

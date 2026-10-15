@@ -4,6 +4,8 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Check } from "lucide-react";
 import { useTheme } from "../theme/ThemeContext";
 import { THEMES } from "../theme/themes";
+import { updateMe } from "../api/endpoints";
+import { useAuth } from "../auth/AuthContext";
 
 const TOPICS = [
   "Philosophy",
@@ -32,7 +34,9 @@ const MIN_TOPICS = 3;
 
 export function Preferences() {
   const { themeId, setThemeId } = useTheme();
+  const { refreshUser } = useAuth();
   const [interests, setInterests] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
 
   const canContinue = interests.length >= MIN_TOPICS;
@@ -43,10 +47,17 @@ export function Preferences() {
     );
   }
 
-  function handleContinue() {
-    if (!canContinue) return;
-    // No backend field for interests yet — captured locally only.
-    console.log("Selected interests:", interests);
+  async function handleContinue() {
+    if (!canContinue || saving) return;
+    setSaving(true);
+    try {
+      await updateMe({ theme: themeId, interests });
+      await refreshUser();
+    } catch {
+      // non-fatal: preferences can still be re-synced later, don't block onboarding
+    } finally {
+      setSaving(false);
+    }
     navigate("/source");
   }
 
@@ -63,7 +74,7 @@ export function Preferences() {
         <h1 className="font-heading text-accent text-lg font-semibold">Personalize</h1>
         <button
           onClick={handleContinue}
-          disabled={!canContinue}
+          disabled={!canContinue || saving}
           aria-label="Continue"
           className="w-9 h-9 rounded-full flex items-center justify-center text-text-secondary hover:text-accent disabled:opacity-30 disabled:hover:text-text-secondary transition-colors"
         >
@@ -137,10 +148,10 @@ export function Preferences() {
           </div>
           <button
             onClick={handleContinue}
-            disabled={!canContinue}
+            disabled={!canContinue || saving}
             className="ml-auto btn-accent font-medium h-12 px-8 rounded-full disabled:opacity-40"
           >
-            Continue
+            {saving ? "Saving..." : "Continue"}
           </button>
         </div>
       </div>
