@@ -1,3 +1,4 @@
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -11,6 +12,13 @@ from app.rate_limit import limiter
 from app.routers import auth, billing, chat, folders, insights, saved_items
 
 load_dotenv()
+
+# Without this, the root logger defaults to WARNING with no handler attached,
+# so every logger.info() (and even logger.warning()) call anywhere in the app
+# -- including in the ingestion pipeline -- is silently dropped rather than
+# reaching Render's (or any) log viewer. Discovered while debugging a worker
+# crash that produced zero log output even at points that should have logged.
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 app = FastAPI()
 app.state.limiter = limiter

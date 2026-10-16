@@ -6,6 +6,12 @@ from app.database import SessionLocal
 from app.models.models import SavedItem
 from app.queue import ingestion_queue, redis_conn
 
+# This is a separate process from the uvicorn one (main.py), so it needs its
+# own logging setup -- main.py's basicConfig() has no effect here. Without
+# this, logger.info() calls anywhere in the ingestion pipeline are silently
+# dropped (only warning()+ survives via logging's handler-of-last-resort).
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
 logger = logging.getLogger(__name__)
 
 
