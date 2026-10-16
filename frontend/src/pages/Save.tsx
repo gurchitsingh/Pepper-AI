@@ -71,11 +71,15 @@ export function Save() {
   const [linkUrl, setLinkUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
+  function refreshRecent() {
     api
       .listSavedItems()
-      .then((items) => setRecentItems(items.slice(0, 2)))
+      .then((items) => setRecentItems(items.slice(0, 4)))
       .catch(() => {});
+  }
+
+  useEffect(() => {
+    refreshRecent();
   }, []);
 
   function showFeedback(f: Feedback) {
@@ -91,6 +95,7 @@ export function Save() {
     try {
       const item = await api.uploadSavedItem("document", file, file.name);
       showFeedback({ type: "success", message: `Saved — Pepper's processing it now (${item.status}).` });
+      refreshRecent();
     } catch (err) {
       showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Couldn't save that — try again" });
     } finally {
@@ -116,6 +121,7 @@ export function Save() {
         try {
           const item = await api.uploadSavedItem("voice_note", blob, "voice-note.webm");
           showFeedback({ type: "success", message: `Voice note saved — Pepper's transcribing it now (${item.status}).` });
+          refreshRecent();
         } catch (err) {
           showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Couldn't save that voice note — try again" });
         } finally {
@@ -140,6 +146,7 @@ export function Save() {
       setNoteContent("");
       setOpenModal(null);
       showFeedback({ type: "success", message: "Saved to your library." });
+      refreshRecent();
     } catch (err) {
       showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Couldn't save that note — try again" });
     } finally {
@@ -156,6 +163,7 @@ export function Save() {
       setLinkUrl("");
       setOpenModal(null);
       showFeedback({ type: "success", message: `Saved — Pepper's on it (${item.source_type}).` });
+      refreshRecent();
     } catch (err) {
       showFeedback({ type: "error", message: err instanceof ApiError ? err.message : "Couldn't save that link — try again" });
     } finally {

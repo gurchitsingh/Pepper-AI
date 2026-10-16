@@ -106,8 +106,8 @@ def process_uploaded_file(file_path: str) -> IngestResult:
 
 
 def process_reel_url(url: str) -> IngestResult:
-    """Downloads a public Instagram/TikTok reel via yt-dlp, extracts its audio, and
-    transcribes it through the same Groq/faster-whisper path as any other audio source.
+    """Downloads a public Instagram/TikTok/Facebook reel via yt-dlp, extracts its audio,
+    and transcribes it through the same Groq/faster-whisper path as any other audio source.
     """
     import yt_dlp
 

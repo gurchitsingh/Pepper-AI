@@ -15,6 +15,7 @@ const TYPE_ICON: Record<string, typeof FileText> = {
   document: FileImage,
   instagram: Link2,
   tiktok: Link2,
+  facebook: Link2,
 };
 
 export function LibraryDetail() {

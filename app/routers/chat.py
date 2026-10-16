@@ -1,14 +1,13 @@
 import logging
 import json
 import os
+from datetime import datetime, timezone
 from typing import Iterator
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
-from google import genai
-from google.genai import types
-from google.genai.errors import APIError
+from groq import APIError, Groq
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
@@ -25,15 +24,20 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["chat"])
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-# "latest" alias (not a pinned version) so Google retiring a specific dated model
-# doesn't silently 404 this endpoint again -- see chat_model_choice in CLAUDE.md.
-GEMINI_MODEL = "gemini-flash-latest"
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# Confirmed against this account's actual /v1/models list -- Groq gates some
+# models per-account, so not every model in their general docs is available here.
+GROQ_CHAT_MODEL = "openai/gpt-oss-120b"
 TOP_K = 5
 WEB_TOP_K = 5
+# Without this, a model-side stall (seen in practice with Gemini during quota/demand
+# pressure -- the request neither errors nor streams anything) leaves the request
+# hanging indefinitely, which also means the frontend's `loading` flag never clears
+# and silently blocks every later message for the rest of the session.
+GROQ_TIMEOUT_S = 30
 
 # How many of the user's most-recently-ready items to consider as suggestion
-# material, and how many candidate questions to ask Gemini for. We generate
+# material, and how many candidate questions to ask the model for. We generate
 # more than the UI shows at once (see suggestedQuestionsFromContent on the
 # frontend) so it can rotate/exclude already-asked ones without refetching.
 MAX_SUGGESTION_ITEMS = 12
@@ -63,27 +67,54 @@ SYSTEM_PROMPT = (
 )
 
 WEB_SYSTEM_PROMPT = (
-    "You answer questions using ONLY the provided live web search results. Answer "
-    "clearly and concisely based on those results; do not use outside knowledge beyond "
-    "what they contain."
+    "You answer questions using ONLY the provided live web search results -- not your own "
+    "training knowledge, which can be out of date. The results were fetched just now and "
+    "take priority over anything you already believe, especially for questions about "
+    "current events, standings, scores, or anything else that changes over time. When "
+    "results include dates, use the most recent one rather than defaulting to a fact you "
+    "recall from training. Answer clearly and concisely based on those results; do not "
+    "add outside knowledge beyond what they contain."
 )
 
 
-def _generate_stream(client: genai.Client, system_prompt: str, user_message: str) -> Iterator[str]:
-    for chunk in client.models.generate_content_stream(
-        model=GEMINI_MODEL,
-        contents=user_message,
-        config=types.GenerateContentConfig(system_instruction=system_prompt),
-    ):
-        if chunk.text:
-            yield chunk.text
+def _generate_stream(client: Groq, system_prompt: str, user_message: str) -> Iterator[str]:
+    stream = client.chat.completions.create(
+        model=GROQ_CHAT_MODEL,
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message},
+        ],
+        stream=True,
+        # Grounded Q&A needs to reliably follow "use ONLY these excerpts" --
+        # at default temperature this model occasionally decides on its own
+        # that sufficient context is insufficient (confirmed: the same prompt
+        # that answered correctly non-deterministically emitted the
+        # INSUFFICIENT_CONTEXT sentinel on another run with no code change).
+        temperature=0,
+    )
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            yield delta
 
 
 def _sse(event_type: str, **data) -> str:
     return f"data: {json.dumps({'type': event_type, **data})}\n\n"
 
 
-def _stream_web_answer(client: genai.Client, question: str) -> Iterator[str]:
+def _friendly_groq_error(e: APIError) -> str:
+    """Maps a raw Groq APIError to a short, user-presentable message, logging
+    the full error server-side rather than showing it verbatim in a chat reply."""
+    status_code = getattr(e, "status_code", None)
+    logger.warning("Groq request failed (status=%s): %s", status_code, e)
+    if status_code == 429:
+        return "Pepper's hit its AI usage limit. Please try again later."
+    if status_code in (500, 502, 503):
+        return "Pepper's AI service is temporarily overloaded. Please try again in a moment."
+    return "Pepper couldn't reach its AI service right now. Please try again."
+
+
+def _stream_web_answer(client: Groq, question: str) -> Iterator[str]:
     try:
         results = web_search(question, max_results=WEB_TOP_K)
     except WebSearchError as e:
@@ -107,7 +138,12 @@ def _stream_web_answer(client: genai.Client, question: str) -> Iterator[str]:
         web_sources.append(WebSource(title=title, url=url, content=content))
 
     context = "\n\n---\n\n".join(context_blocks)
-    user_message = f"Web search results:\n\n{context}\n\nQuestion: {question}"
+    # Anchors "most recent" to an actual date -- without it the model has no way to
+    # judge which of several differently-dated results is current, and tends to fall
+    # back on whatever it already "knows" from training instead of reading dates in
+    # the search results themselves.
+    today = datetime.now(timezone.utc).strftime("%B %d, %Y")
+    user_message = f"Today's date: {today}\n\nWeb search results:\n\n{context}\n\nQuestion: {question}"
 
     for piece in _generate_stream(client, WEB_SYSTEM_PROMPT, user_message):
         yield _sse("chunk", text=piece)
@@ -121,7 +157,7 @@ def _stream_web_answer(client: genai.Client, question: str) -> Iterator[str]:
 
 
 def _stream_saved_content_answer(
-    client: genai.Client, question: str, results, sources: list[ChatSource]
+    client: Groq, question: str, results, sources: list[ChatSource]
 ) -> Iterator[str]:
     context_blocks = []
     for chunk, item in results:
@@ -170,19 +206,39 @@ def chat(
     if not payload.question or not payload.question.strip():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="question is required")
 
-    if not GOOGLE_API_KEY:
+    if not GROQ_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="GOOGLE_API_KEY is not set in .env. Get one at https://aistudio.google.com/apikey",
+            detail="GROQ_API_KEY is not set in .env. Get one at https://console.groq.com/keys",
         )
 
+    query_vector = None
     try:
         [query_vector] = embed_texts([payload.question], input_type="query")
-    except EmbeddingError as e:
-        raise HTTPException(status_code=status.HTTP_501_NOT_IMPLEMENTED, detail=str(e))
+    except EmbeddingError:
+        query_vector = None
 
-    results = search_chunks(db, query_vector, user_id=current_user.id, top_k=TOP_K)
-    client = genai.Client(api_key=GOOGLE_API_KEY)
+    if query_vector is not None:
+        results = search_chunks(db, query_vector, user_id=current_user.id, top_k=TOP_K)
+    else:
+        # Graceful fallback: match keywords across the user's saved content
+        keywords = [w.lower().strip("?,.!'\"") for w in payload.question.split() if len(w) > 2]
+        user_chunks = (
+            db.query(Chunk, SavedItem)
+            .join(SavedItem, SavedItem.id == Chunk.saved_item_id)
+            .filter(SavedItem.user_id == current_user.id)
+            .all()
+        )
+        scored = []
+        for chunk, item in user_chunks:
+            chunk_lower = chunk.text.lower()
+            score = sum(1 for kw in keywords if kw in chunk_lower)
+            scored.append((score, chunk, item))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        results = [(c, item) for score, c, item in scored[:TOP_K] if score > 0]
+        if not results and user_chunks:
+            results = [(c, item) for _, c, item in scored[:TOP_K]]
+    client = Groq(api_key=GROQ_API_KEY, timeout=GROQ_TIMEOUT_S)
 
     sources = [
         ChatSource(
@@ -203,7 +259,14 @@ def chat(
             else:
                 yield from _stream_saved_content_answer(client, payload.question, results, sources)
         except APIError as e:
-            yield _sse("error", detail=f"Gemini request failed: {e}")
+            yield _sse("error", detail=_friendly_groq_error(e))
+        except Exception as e:
+            # Catches what APIError doesn't -- most notably the client-side
+            # timeout above firing (httpx raises its own exception type, not
+            # an APIError) when Groq accepts the connection but never
+            # streams anything back.
+            logger.warning("Chat request failed outside Groq's own error type: %s", e)
+            yield _sse("error", detail="Pepper couldn't reach its AI service right now. Please try again.")
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
@@ -248,10 +311,10 @@ def get_suggested_questions(
     current_user: User = Depends(get_current_user),
 ):
     """Content-grounded chat suggestions: pulls real excerpts from the user's
-    saved items and asks Gemini for specific questions those excerpts can
+    saved items and asks the model for specific questions those excerpts can
     answer, rather than the generic title-template questions the frontend
     falls back to. Returns an empty list (never an error) whenever this isn't
-    possible -- no key, no ready items, or a Gemini failure -- so the caller
+    possible -- no key, no ready items, or a model failure -- so the caller
     can fall back to that title-based path."""
     items = (
         db.query(SavedItem)
@@ -260,7 +323,7 @@ def get_suggested_questions(
         .limit(MAX_SUGGESTION_ITEMS)
         .all()
     )
-    if not items or not GOOGLE_API_KEY:
+    if not items or not GROQ_API_KEY:
         return SuggestedQuestionsOut(questions=[])
 
     snippets = _content_snippets(db, items)
@@ -271,18 +334,25 @@ def get_suggested_questions(
     prompt = SUGGESTIONS_PROMPT.format(count=SUGGESTION_COUNT) + "\n\n" + "\n\n".join(sections)
 
     try:
-        client = genai.Client(api_key=GOOGLE_API_KEY)
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json",
-                response_schema=SuggestedQuestionsOut,
-            ),
+        client = Groq(api_key=GROQ_API_KEY, timeout=GROQ_TIMEOUT_S)
+        response = client.chat.completions.create(
+            model=GROQ_CHAT_MODEL,
+            messages=[
+                {
+                    "role": "system",
+                    # Groq's JSON mode (unlike Gemini's response_schema) doesn't bind to a
+                    # Pydantic model directly -- it just guarantees valid JSON, so the exact
+                    # shape has to be spelled out and then validated against the schema below.
+                    "content": 'Respond with ONLY a JSON object of the form {"questions": ["...", ...]}. No other text.',
+                },
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
         )
-        parsed: SuggestedQuestionsOut = response.parsed
+        raw = response.choices[0].message.content or "{}"
+        parsed = SuggestedQuestionsOut.model_validate_json(raw)
         questions = [q.strip() for q in parsed.questions if q.strip()][:SUGGESTION_COUNT]
         return SuggestedQuestionsOut(questions=questions)
     except Exception as e:
-        logger.warning("Suggested-question generation via Gemini failed, falling back: %s", e)
+        logger.warning("Suggested-question generation via Groq failed, falling back: %s", e)
         return SuggestedQuestionsOut(questions=[])

@@ -24,9 +24,22 @@ const TYPE_ICON: Record<string, typeof FileText> = {
   document: FileImage,
   instagram: Link2,
   tiktok: Link2,
+  facebook: Link2,
 };
 
 const NEAR_BOTTOM_THRESHOLD_PX = 80;
+
+// getSuggestedQuestions() calls Gemini, which is often on a tight free-tier daily
+// quota. Without this cache, every mount of this page (i.e. every time the user
+// taps the Chat tab) fired a fresh request, burning quota before the user asked a
+// single real question. Module-level state survives across mounts for the life of
+// the page load, so repeated visits within the TTL reuse the same result.
+const SUGGESTED_QUESTIONS_CACHE_TTL_MS = 10 * 60 * 1000;
+let suggestedQuestionsCache: { questions: string[]; fetchedAt: number } | null = null;
+// Dedupes concurrent fetches too -- React StrictMode's dev-only double-invoke of
+// effects would otherwise fire two requests back-to-back before the first's
+// result lands and populates the cache above.
+let suggestedQuestionsInFlight: Promise<string[]> | null = null;
 
 function SourceCard({ source }: { source: ChatSource }) {
   const [expanded, setExpanded] = useState(false);
@@ -82,16 +95,34 @@ export function Chatbot() {
   // on and it can get stuck since the final settle doesn't always re-fire.
   const autoScrollingRef = useRef(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  // Tracks the in-flight /chat request so "New Chat" (and a fresh question) can
+  // cancel a stalled one instead of leaving `loading` stuck true forever, which
+  // would otherwise silently block every later message for the rest of the session.
+  const activeRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     api
       .listSavedItems()
       .then(setSavedItems)
       .catch(() => {});
-    api
-      .getSuggestedQuestions()
-      .then((res) => setContentSuggestions(res.questions))
-      .catch(() => {});
+
+    const isFresh = suggestedQuestionsCache && Date.now() - suggestedQuestionsCache.fetchedAt < SUGGESTED_QUESTIONS_CACHE_TTL_MS;
+    if (isFresh) {
+      setContentSuggestions(suggestedQuestionsCache!.questions);
+      return;
+    }
+    if (!suggestedQuestionsInFlight) {
+      suggestedQuestionsInFlight = api
+        .getSuggestedQuestions()
+        .then((res) => {
+          suggestedQuestionsCache = { questions: res.questions, fetchedAt: Date.now() };
+          return res.questions;
+        })
+        .finally(() => {
+          suggestedQuestionsInFlight = null;
+        });
+    }
+    suggestedQuestionsInFlight.then(setContentSuggestions).catch(() => {});
   }, []);
 
   function smoothScrollToBottom(el: HTMLDivElement) {
@@ -192,6 +223,10 @@ export function Chatbot() {
       return;
     }
 
+    activeRequestRef.current?.abort();
+    const controller = new AbortController();
+    activeRequestRef.current = controller;
+
     setLoading(true);
     const replyId = crypto.randomUUID();
     setMessages((prev) => [...prev, { id: replyId, role: "assistant", content: "" }]);
@@ -200,19 +235,23 @@ export function Chatbot() {
         setMessages((prev) => prev.map((message) => (
           message.id === replyId ? { ...message, content: message.content + chunk } : message
         )));
-      });
+      }, controller.signal);
       setMessages((prev) => prev.map((message) => (
         message.id === replyId ? { ...message, content: res.answer, sources: res.sources } : message
       )));
       flashComplete(replyId);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       const message = err instanceof ApiError ? err.message : "Pepper couldn't answer that — try again.";
       setMessages((prev) => prev.map((chatMessage) => (
         chatMessage.id === replyId ? { ...chatMessage, content: message } : chatMessage
       )));
       flashComplete(replyId);
     } finally {
-      setLoading(false);
+      if (activeRequestRef.current === controller) {
+        activeRequestRef.current = null;
+        setLoading(false);
+      }
     }
   }
 
@@ -221,13 +260,20 @@ export function Chatbot() {
     submitQuestion(question);
   }
 
+  function handleNewChat() {
+    activeRequestRef.current?.abort();
+    activeRequestRef.current = null;
+    setLoading(false);
+    newSession();
+  }
+
   return (
     <div className="fixed inset-x-0 top-16 bottom-[72px] max-w-[700px] mx-auto w-full px-6 pt-6 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-text-primary text-2xl font-bold">Chat with Pepper</h2>
         <button
           type="button"
-          onClick={newSession}
+          onClick={handleNewChat}
           disabled={messages.length === 0 && !loading}
           className="flex items-center gap-1 text-text-primary text-sm font-medium px-3.5 py-1.5 rounded-full border border-text-secondary/20 hover:border-accent hover:text-accent disabled:opacity-40 transition-colors"
         >

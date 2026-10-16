@@ -3,7 +3,7 @@ import os
 import shutil
 import uuid
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -18,7 +18,7 @@ from app.models.models import Chunk, Folder, SavedItem, Transcript, TranscriptSe
 from app.queue import ingestion_queue
 from app.retrieval import search_chunks
 from app.schemas import SavedItemCreate, SavedItemOut, SavedItemUpdate, SegmentOut
-from app.titles import generate_title
+from app.titles import fallback_title, generate_title
 
 router = APIRouter(prefix="/saved-items", tags=["saved-items"])
 
@@ -68,10 +68,35 @@ def _to_out(item: SavedItem, transcript_text: str | None, folder_name: str | Non
 @router.post("", response_model=SavedItemOut, status_code=status.HTTP_201_CREATED)
 def create_saved_item(
     payload: SavedItemCreate,
+    response: Response,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     check_usage_allowed(db, current_user)
+
+    if payload.source_url:
+        # Re-saving a URL that's already pending/processing/ready for this user
+        # would just re-download and re-transcribe identical content, burning
+        # free-plan usage minutes twice -- return the existing item instead.
+        # Failed items are excluded so a bad first attempt can still be retried.
+        existing = (
+            db.query(SavedItem)
+            .filter(
+                SavedItem.user_id == current_user.id,
+                SavedItem.source_url == payload.source_url,
+                SavedItem.status != "failed",
+            )
+            .order_by(SavedItem.created_at.desc())
+            .first()
+        )
+        if existing is not None:
+            response.status_code = status.HTTP_200_OK
+            transcript = db.query(Transcript).filter(Transcript.saved_item_id == existing.id).first()
+            folder_name = None
+            if existing.folder_id is not None:
+                folder = db.get(Folder, existing.folder_id)
+                folder_name = folder.name if folder else None
+            return _to_out(existing, transcript.raw_text if transcript else None, folder_name)
 
     if payload.source_type == "note":
         if not payload.content or not payload.content.strip():
@@ -84,7 +109,7 @@ def create_saved_item(
         db.add(Transcript(saved_item_id=item.id, raw_text=payload.content))
         store_chunks(db, item, payload.content, segments=[], content_type="note")
         if item.title is None:
-            item.title = generate_title(payload.content)
+            item.title = generate_title(payload.content) or fallback_title(payload.content)
         db.commit()
         db.refresh(item)
         enqueue_recompute_folders(current_user.id)

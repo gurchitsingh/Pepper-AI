@@ -1,5 +1,5 @@
 import { ApiError, apiFetch, apiFetchBlob, apiFetchSse } from "./client";
-import type { ChatResponse, ChatStreamEvent, Folder, Insights, SavedItem, SuggestedQuestionsOut, Token, UserOut } from "./types";
+import type { BillingStatus, ChatResponse, ChatStreamEvent, Folder, Insights, SavedItem, SuggestedQuestionsOut, Token, UserOut } from "./types";
 
 export function signup(email: string, password: string, name?: string) {
   return apiFetch<Token>("/auth/signup", {
@@ -72,7 +72,16 @@ export function createLinkItem(sourceUrl: string) {
   const isYoutube = /(?:youtube\.com|youtu\.be)/i.test(sourceUrl);
   const isInstagram = /instagram\.com/i.test(sourceUrl);
   const isTiktok = /tiktok\.com/i.test(sourceUrl);
-  const sourceType = isYoutube ? "youtube" : isInstagram ? "instagram" : isTiktok ? "tiktok" : "article";
+  const isFacebook = /(?:facebook\.com|fb\.watch)/i.test(sourceUrl);
+  const sourceType = isYoutube
+    ? "youtube"
+    : isInstagram
+      ? "instagram"
+      : isTiktok
+        ? "tiktok"
+        : isFacebook
+          ? "facebook"
+          : "article";
   return apiFetch<SavedItem>("/saved-items", {
     method: "POST",
     body: JSON.stringify({
@@ -123,12 +132,13 @@ export function getInsights() {
   return apiFetch<Insights>("/insights");
 }
 
-export async function chat(question: string, onChunk?: (text: string) => void): Promise<ChatResponse> {
+export async function chat(question: string, onChunk?: (text: string) => void, signal?: AbortSignal): Promise<ChatResponse> {
   let answer = "";
   let sources: ChatResponse["sources"] = [];
   await apiFetchSse<ChatStreamEvent>("/chat", {
     method: "POST",
     body: JSON.stringify({ question }),
+    signal,
   }, (event) => {
     if (event.type === "chunk") {
       answer += event.text;
@@ -144,4 +154,8 @@ export async function chat(question: string, onChunk?: (text: string) => void): 
 
 export function getSuggestedQuestions() {
   return apiFetch<SuggestedQuestionsOut>("/chat/suggested-questions");
+}
+
+export function getBillingStatus() {
+  return apiFetch<BillingStatus>("/billing/status");
 }

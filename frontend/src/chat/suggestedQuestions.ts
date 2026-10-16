@@ -9,6 +9,7 @@ const QUESTION_TEMPLATES: Record<string, (title: string) => string> = {
   document: (t) => `What's in the document "${t}"?`,
   instagram: (t) => `What did I save from "${t}"?`,
   tiktok: (t) => `What did I save from "${t}"?`,
+  facebook: (t) => `What did I save from "${t}"?`,
 };
 
 function truncate(text: string, max = 40): string {

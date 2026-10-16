@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Cropper, { type Area } from "react-easy-crop";
-import { X, User, LogOut, Mail, Lock, Key, Download, Check, Camera, Pencil } from "lucide-react";
+import { X, User, LogOut, Mail, Lock, Key, Download, Check, Camera, Pencil, Clock } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import { useTheme } from "../theme/ThemeContext";
 import { THEMES } from "../theme/themes";
@@ -10,6 +10,7 @@ import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import { DURATION_ENTER, DURATION_EXIT, EASE_IN, EASE_OUT } from "../lib/motion";
 import { getCroppedImageBlob } from "../lib/cropImage";
+import type { BillingStatus } from "../api/types";
 
 const EYEBROW = "text-accent text-[11px] font-semibold uppercase tracking-widest";
 const FIELD_LABEL = "text-[11px] font-semibold uppercase tracking-widest text-text-secondary";
@@ -49,8 +50,11 @@ export function Settings() {
   const [profileError, setProfileError] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
 
+  const [billing, setBilling] = useState<BillingStatus | null>(null);
+
   useEffect(() => {
     refreshUser().catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load account"));
+    api.getBillingStatus().then(setBilling).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -340,6 +344,34 @@ export function Settings() {
           </form>
         )}
       </section>
+
+      {billing && billing.limit_seconds !== null && (
+        <section className="flex flex-col gap-3">
+          <h3 className={EYEBROW}>Usage</h3>
+          <div className="flex flex-col gap-2 rounded-xl border border-text-secondary/15 bg-surface px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <Clock size={18} className="text-text-secondary shrink-0" />
+              <div className="min-w-0 flex-grow">
+                <p className="text-text-primary text-sm">
+                  {Math.round(billing.total_seconds / 60)} / {Math.round(billing.limit_seconds / 60)} min used
+                </p>
+                <p className="text-text-secondary text-xs">Free plan monthly content limit</p>
+              </div>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-text-secondary/15 overflow-hidden">
+              <div
+                className={`h-full rounded-full ${billing.over_limit ? "bg-error" : "bg-accent"}`}
+                style={{ width: `${Math.min(100, (billing.total_seconds / billing.limit_seconds) * 100)}%` }}
+              />
+            </div>
+            {billing.over_limit && (
+              <p className="text-error text-xs">
+                You've reached the free plan limit. Upgrade to keep saving new content.
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h3 className={EYEBROW}>Security</h3>
