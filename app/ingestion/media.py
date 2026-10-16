@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 
 WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# Without this, a Groq-side stall leaves the worker blocked on this one job
+# indefinitely -- no crash, no error, just silence -- since SimpleWorker
+# processes jobs one at a time with no per-job watchdog of its own.
+GROQ_TIMEOUT_S = 60
 
 _model: WhisperModel | None = None
 
@@ -28,7 +32,7 @@ def _get_model() -> WhisperModel:
 
 
 def _transcribe_with_groq(audio_path: str) -> IngestResult:
-    client = Groq(api_key=GROQ_API_KEY)
+    client = Groq(api_key=GROQ_API_KEY, timeout=GROQ_TIMEOUT_S)
     with open(audio_path, "rb") as f:
         response = client.audio.transcriptions.create(
             file=(os.path.basename(audio_path), f.read()),
