@@ -14,7 +14,7 @@ const CATEGORY_GROUPS: { id: string; label: string; color: string; match: (t: st
     id: "links",
     label: "Links",
     color: "color-mix(in srgb, var(--accent) 55%, transparent)",
-    match: (t) => t === "article" || t === "youtube" || t === "instagram" || t === "tiktok",
+    match: (t) => t === "article" || t === "youtube" || t === "instagram" || t === "tiktok" || t === "facebook",
   },
   { id: "voice", label: "Voice", color: "var(--text-secondary)", match: (t) => t === "voice_note" },
   { id: "documents", label: "Documents", color: "var(--color-success)", match: (t) => t === "document" },

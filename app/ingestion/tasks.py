@@ -10,14 +10,14 @@ from app.ingestion import article, document, media, youtube
 from app.ingestion.chunking import chunk_segments, chunk_text
 from app.ingestion.common import IngestionError
 from app.models.models import Chunk, SavedItem, Transcript, TranscriptSegment
-from app.titles import generate_title
+from app.titles import fallback_title, generate_title
 
 logger = logging.getLogger(__name__)
 
 def _process_reel(item):
-    """Instagram/TikTok items arrive two ways: pasted as a link (source_url set,
-    downloaded via yt-dlp) or captured on-device via the upload endpoint
-    (uploaded_file_path set, already on disk).
+    """Instagram/TikTok/Facebook items arrive two ways: pasted as a link
+    (source_url set, downloaded via yt-dlp) or captured on-device via the
+    upload endpoint (uploaded_file_path set, already on disk).
     """
     if item.source_url:
         return media.process_reel_url(item.source_url)
@@ -29,6 +29,7 @@ HANDLERS = {
     "youtube": lambda item: youtube.process(item.source_url),
     "instagram": _process_reel,
     "tiktok": _process_reel,
+    "facebook": _process_reel,
     "voice_note": lambda item: media.process_uploaded_file(item.uploaded_file_path),
     "document": lambda item: document.process_uploaded_document(item.uploaded_file_path),
 }
@@ -126,7 +127,7 @@ def process_saved_item(saved_item_id: str) -> None:
         if result.title:
             item.title = result.title
         else:
-            item.title = generate_title(result.raw_text)
+            item.title = generate_title(result.raw_text) or fallback_title(result.raw_text)
         if result.segments:
             # last segment's end time as a duration proxy -- avoids a second ffprobe
             # call since Whisper/YouTube segments are already computed above.

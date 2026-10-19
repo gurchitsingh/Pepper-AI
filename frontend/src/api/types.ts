@@ -50,6 +50,15 @@ export interface SuggestedQuestionsOut {
   questions: string[];
 }
 
+export interface BillingStatus {
+  plan: string;
+  short_form_seconds: number;
+  long_form_seconds: number;
+  total_seconds: number;
+  limit_seconds: number | null;
+  over_limit: boolean;
+}
+
 export interface InsightsTypeBreakdown {
   source_type: string;
   count: number;

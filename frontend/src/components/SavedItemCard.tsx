@@ -12,6 +12,7 @@ const TYPE_ICON: Record<string, typeof FileText> = {
   document: FileImage,
   instagram: Link2,
   tiktok: Link2,
+  facebook: Link2,
 };
 
 const TYPE_LABEL: Record<string, string> = {
@@ -22,6 +23,7 @@ const TYPE_LABEL: Record<string, string> = {
   document: "Document",
   instagram: "Link",
   tiktok: "Link",
+  facebook: "Link",
 };
 
 const STATUS_BADGE: Record<SavedItem["status"], string> = {

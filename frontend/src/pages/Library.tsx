@@ -11,7 +11,7 @@ import { useDebouncedValue } from "../hooks/useDebouncedValue";
 const FILTERS = [
   { id: "all", label: "All", Icon: InfinityIcon, match: () => true },
   { id: "note", label: "Notes", Icon: FileText, match: (t: string) => t === "note" },
-  { id: "link", label: "Links", Icon: Link2, match: (t: string) => t === "article" || t === "youtube" },
+  { id: "link", label: "Links", Icon: Link2, match: (t: string) => t === "article" || t === "youtube" || t === "instagram" || t === "tiktok" || t === "facebook" },
   { id: "voice", label: "Voice", Icon: Mic, match: (t: string) => t === "voice_note" },
   { id: "document", label: "Documents", Icon: FileImage, match: (t: string) => t === "document" },
 ] as const;

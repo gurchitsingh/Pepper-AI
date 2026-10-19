@@ -16,6 +16,18 @@ logger = logging.getLogger(__name__)
 
 WHISPER_MODEL_SIZE = os.getenv("WHISPER_MODEL_SIZE", "small")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+# Without this, a Groq-side stall leaves the worker blocked on this one job
+# indefinitely -- no crash, no error, just silence -- since SimpleWorker
+# processes jobs one at a time with no per-job watchdog of its own.
+GROQ_TIMEOUT_S = 60
+# Loading the local Whisper model (ctranslate2 + model weights) is the single
+# most memory-hungry thing this app does. On a memory-constrained host (e.g.
+# Render's free 512MB tier) that can OOM-kill the whole container with no
+# error logged -- SIGKILL doesn't give the process time to flush a log line,
+# which is indistinguishable from a silent hang from the outside. Set this to
+# "true" in that environment's env vars so a Groq failure fails the job
+# cleanly instead of risking a crash that orphans it.
+DISABLE_LOCAL_WHISPER_FALLBACK = os.getenv("DISABLE_LOCAL_WHISPER_FALLBACK", "false").lower() == "true"
 
 _model: WhisperModel | None = None
 
@@ -28,7 +40,7 @@ def _get_model() -> WhisperModel:
 
 
 def _transcribe_with_groq(audio_path: str) -> IngestResult:
-    client = Groq(api_key=GROQ_API_KEY)
+    client = Groq(api_key=GROQ_API_KEY, timeout=GROQ_TIMEOUT_S)
     with open(audio_path, "rb") as f:
         response = client.audio.transcriptions.create(
             file=(os.path.basename(audio_path), f.read()),
@@ -82,16 +94,27 @@ def extract_audio(source_path: str) -> str:
 def transcribe_audio(audio_path: str) -> IngestResult:
     """Transcribes via Groq's hosted whisper-large-v3 when GROQ_API_KEY is set,
     falling back to the local faster-whisper model on any Groq failure (missing
-    key, network error, rate limit, etc.) so ingestion never hard-depends on Groq.
+    key, network error, rate limit, etc.) so ingestion never hard-depends on Groq
+    -- unless DISABLE_LOCAL_WHISPER_FALLBACK opts out of that fallback because
+    the local model is too memory-heavy for this host.
     """
     if GROQ_API_KEY:
+        logger.info("transcribe_audio: starting Groq transcription for %s", audio_path)
         try:
-            return _transcribe_with_groq(audio_path)
+            result = _transcribe_with_groq(audio_path)
+            logger.info("transcribe_audio: Groq transcription succeeded for %s", audio_path)
+            return result
         except IngestionError:
             raise
         except Exception:
-            logger.warning("Groq transcription failed, falling back to local faster-whisper", exc_info=True)
-    return _transcribe_with_faster_whisper(audio_path)
+            logger.warning("Groq transcription failed for %s", audio_path, exc_info=True)
+            if DISABLE_LOCAL_WHISPER_FALLBACK:
+                raise IngestionError("Groq transcription failed and local fallback is disabled on this host")
+
+    logger.info("transcribe_audio: starting local faster-whisper transcription for %s", audio_path)
+    result = _transcribe_with_faster_whisper(audio_path)
+    logger.info("transcribe_audio: local transcription succeeded for %s", audio_path)
+    return result
 
 
 def process_uploaded_file(file_path: str) -> IngestResult:
@@ -106,8 +129,8 @@ def process_uploaded_file(file_path: str) -> IngestResult:
 
 
 def process_reel_url(url: str) -> IngestResult:
-    """Downloads a public Instagram/TikTok reel via yt-dlp, extracts its audio, and
-    transcribes it through the same Groq/faster-whisper path as any other audio source.
+    """Downloads a public Instagram/TikTok/Facebook reel via yt-dlp, extracts its audio,
+    and transcribes it through the same Groq/faster-whisper path as any other audio source.
     """
     import yt_dlp
 
