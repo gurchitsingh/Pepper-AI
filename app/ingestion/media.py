@@ -143,11 +143,13 @@ def process_reel_url(url: str) -> IngestResult:
             "no_warnings": True,
             "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav"}],
         }
+        logger.info("process_reel_url: starting yt-dlp download+extract for %s", url)
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
         except yt_dlp.utils.DownloadError as e:
             raise IngestionError(f"Could not download this reel: {e}")
+        logger.info("process_reel_url: yt-dlp download+extract (incl. ffmpeg postprocessing) finished for %s", url)
 
         wav_path = os.path.join(tmp_dir, "audio.wav")
         if not os.path.exists(wav_path):
