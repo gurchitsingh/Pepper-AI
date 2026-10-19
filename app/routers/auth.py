@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 import os
 import shutil
@@ -15,12 +16,15 @@ from app.auth import (
     verify_google_token,
     verify_password,
 )
+from app.email_verification import VERDICT_MESSAGES, check_email_deliverability
 from app.database import get_db
 from app.models.models import User
 from app.rate_limit import limiter
 from app.schemas import OAuthLogin, PasswordChange, Token, UserLogin, UserOut, UserSignup, UserUpdate
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger(__name__)
 
 AVATAR_DIR = os.getenv("AVATAR_DIR", "./uploads/avatars")
 AVATAR_CONTENT_TYPE_EXT = {
@@ -99,6 +103,20 @@ def get_avatar(current_user: User = Depends(get_current_user)):
 def signup(request: Request, payload: UserSignup, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+
+    # External deliverability check (no-op unless EMAIL_VERIFIER_API_KEY is set).
+    # Hard verdicts (undeliverable/blocked) block signup; "unknown" and provider
+    # outages let the user through so a third-party outage can't stop signups.
+    try:
+        verdict = check_email_deliverability(payload.email)
+    except Exception:
+        logger.warning("Email verifier unavailable; allowing signup for %s", payload.email)
+        verdict = "success"
+    if verdict != "success":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=VERDICT_MESSAGES[verdict],
+        )
 
     user = User(email=payload.email, name=payload.name, hashed_password=hash_password(payload.password))
     db.add(user)
