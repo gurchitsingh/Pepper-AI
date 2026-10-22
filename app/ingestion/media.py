@@ -136,18 +136,24 @@ def process_reel_url(url: str) -> IngestResult:
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         out_template = os.path.join(tmp_dir, "audio.%(ext)s")
-        # No "postprocessors" here deliberately: yt-dlp's own FFmpegExtractAudio
-        # postprocessor runs ffmpeg through yt-dlp's internal invocation/version-
-        # detection code, which was observed hanging indefinitely in production
-        # (a 180s RQ job timeout fired waiting on it -- see commit history around
-        # 2026-10-22). Downloading the raw best-audio file and converting it
-        # ourselves via extract_audio() below sidesteps that code path entirely;
-        # extract_audio() already works reliably elsewhere (voice notes, uploads).
+        # No "postprocessors" here deliberately, AND "fixup": "never": yt-dlp
+        # invokes its own ffmpeg version-probe (hanging indefinitely in
+        # production -- a 180s RQ job timeout fired waiting on it) from TWO
+        # separate places, not just the postprocessors list -- removing that
+        # list alone wasn't enough. yt-dlp's `fixup()` step runs automatically
+        # after every download regardless of configured postprocessors, and
+        # for some reel formats (seen: an "m4a_dash" container) decides it
+        # needs to auto-correct the file via FFmpegFixupM4aPP, which triggers
+        # the same hanging ffmpeg version-probe through pp.available. "fixup":
+        # "never" skips that step entirely, before it ever touches ffmpeg --
+        # harmless here since we run our own extract_audio() conversion next
+        # regardless of the source container's quirks.
         ydl_opts = {
             "format": "bestaudio/best",
             "outtmpl": out_template,
             "quiet": True,
             "no_warnings": True,
+            "fixup": "never",
         }
         logger.info("process_reel_url: starting yt-dlp download for %s", url)
         try:
