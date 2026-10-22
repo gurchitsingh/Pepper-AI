@@ -136,25 +136,36 @@ def process_reel_url(url: str) -> IngestResult:
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         out_template = os.path.join(tmp_dir, "audio.%(ext)s")
+        # No "postprocessors" here deliberately: yt-dlp's own FFmpegExtractAudio
+        # postprocessor runs ffmpeg through yt-dlp's internal invocation/version-
+        # detection code, which was observed hanging indefinitely in production
+        # (a 180s RQ job timeout fired waiting on it -- see commit history around
+        # 2026-10-22). Downloading the raw best-audio file and converting it
+        # ourselves via extract_audio() below sidesteps that code path entirely;
+        # extract_audio() already works reliably elsewhere (voice notes, uploads).
         ydl_opts = {
             "format": "bestaudio/best",
             "outtmpl": out_template,
             "quiet": True,
             "no_warnings": True,
-            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav"}],
         }
-        logger.info("process_reel_url: starting yt-dlp download+extract for %s", url)
+        logger.info("process_reel_url: starting yt-dlp download for %s", url)
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
+                downloaded_path = ydl.prepare_filename(info)
         except yt_dlp.utils.DownloadError as e:
             raise IngestionError(f"Could not download this reel: {e}")
-        logger.info("process_reel_url: yt-dlp download+extract (incl. ffmpeg postprocessing) finished for %s", url)
+        logger.info("process_reel_url: yt-dlp download finished for %s -> %s", url, downloaded_path)
 
-        wav_path = os.path.join(tmp_dir, "audio.wav")
-        if not os.path.exists(wav_path):
+        if not os.path.exists(downloaded_path):
             raise IngestionError("Reel download: expected audio file was not produced")
 
-        result = transcribe_audio(wav_path)
+        wav_path = extract_audio(downloaded_path)
+        logger.info("process_reel_url: ffmpeg audio extraction finished for %s", url)
+        try:
+            result = transcribe_audio(wav_path)
+        finally:
+            os.remove(wav_path)
         result.title = result.title or (info or {}).get("title") or (info or {}).get("description")
         return result
