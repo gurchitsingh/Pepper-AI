@@ -22,13 +22,13 @@ operational state: what's actually happening right now and what to do next.
 - Signup, login, CORS, DB connectivity: all confirmed working end-to-end against the real
   deployment, not just locally.
 
-## Resolved problem (was "the one open problem" — now fixed, verify it stuck)
+## Probably resolved, but treat with caution — a "confirmed" fix already failed once
 
 **Saving a reel/short on the live deployed app was getting stuck in `"processing"` forever.**
-Root cause found and fixed in commit `dd127e4`. Don't re-investigate this from scratch — read
-this section first. If a user reports reel saving is broken again, it's more likely a *new*
-issue than a regression of this one (it was verified end-to-end locally before pushing), but
-check the error message first before assuming that.
+Currently on fix attempt #2 (commit `236397c`). **Do not trust a local test alone on this bug**
+— fix attempt #1 (`dd127e4`) passed a local end-to-end test, was written up as "resolved" in
+these docs, and then failed identically in production on the very next real-world retry. Only
+trust this is actually fixed once a fresh Render log confirms a reel saved successfully.
 
 Chain of fixes that got here, in order (first several were real bugs but not this one's cause):
 
@@ -44,21 +44,40 @@ Chain of fixes that got here, in order (first several were real bugs but not thi
 5. With logging finally working, a Render log surfaced the real exception:
    `rq.timeouts.JobTimeoutException: Task exceeded maximum timeout value (180 seconds)`, with a
    traceback showing it stuck inside yt-dlp's internal `_get_ffmpeg_version()` — a subprocess
-   call running `ffmpeg -bsfs` as part of yt-dlp's `FFmpegExtractAudio` postprocessor, hanging
-   indefinitely in production. (Why that specific subprocess call hangs in this container isn't
-   fully root-caused — the fix sidesteps it rather than explains it.)
-6. **The actual fix**: `process_reel_url()` in `app/ingestion/media.py` no longer uses yt-dlp's
-   `FFmpegExtractAudio` postprocessor at all. It downloads the raw best-audio file with no
-   postprocessor, then converts it with the existing `extract_audio()` helper — a plain
-   `subprocess.run(["ffmpeg", ...])` call, bypassing yt-dlp's internal ffmpeg machinery
-   entirely. `extract_audio()` already worked reliably elsewhere (voice notes, document
-   uploads). Verified against a real Instagram reel locally (direct function call, not just
-   import-check) before pushing.
+   call running `ffmpeg -bsfs`, hanging indefinitely in production. (Why that specific
+   subprocess call hangs in this container isn't fully root-caused — both fixes below sidestep
+   it rather than explain it.)
+6. **Fix attempt #1** (`dd127e4`): stopped using yt-dlp's `FFmpegExtractAudio` postprocessor,
+   downloading raw audio and converting it via the existing `extract_audio()` helper instead.
+   Passed a local end-to-end test. **Failed in production with an identical traceback on the
+   next real retry.** Turned out this wasn't the actual trigger.
+7. **Fix attempt #2** (`236397c`, current): the repeat traceback revealed the hang is actually
+   inside yt-dlp's *automatic* `fixup()` step, which runs after every download regardless of
+   configured postprocessors — for this reel's format (an `"m4a_dash"` container), yt-dlp
+   decided to auto-correct it via `FFmpegFixupM4aPP`, which triggers the same hanging ffmpeg
+   probe. Set `"fixup": "never"` in `ydl_opts` (confirmed from yt-dlp's own source: `if
+   fixup_policy in ('ignore', 'never'): return`, before `ffmpeg_fixup()` is ever called). Safe
+   since `extract_audio()` does its own conversion afterward regardless of container quirks.
+   Passed the same local test attempt #1 passed — **which is exactly why that's not enough
+   evidence this time.**
 
-If this resurfaces, the first thing to check is whether it's the *same* symptom (stuck
-`"processing"`, no error) or a *different* one (an actual `failed` status with a reason) —
-logging now works, so a real failure should show up with a clear error message instead of
-silence. Don't assume it's the ffmpeg-postprocessor issue again without checking the log first.
+### What to do next on this problem
+
+Ask the user to retry a reel save on the live app and paste fresh Render logs. Look for either:
+- Success (item reaches `"ready"` with a transcript) → genuinely fixed, update this doc to say so
+- The identical `JobTimeoutException` traceback again → attempt #2 also failed; the `"fixup":
+  "never"` theory was wrong or incomplete. Next angle to try: `yt-dlp` accepts an
+  `"ffmpeg_location"` option — pointing it at a known-working ffmpeg binary path might avoid
+  whatever `_get_ffmpeg_version()`'s own `Popen` call is doing differently from our working
+  `extract_audio()` subprocess call (which does *not* open `stdin=subprocess.PIPE` — that's a
+  concrete difference between the two code paths worth investigating if this recurs)
+- A *different* error entirely → new, separate issue, don't assume it's related to this one
+
+**Still true, unrelated to the above**: direct DB/Redis access to Neon/Upstash from the *user's
+local machine* is blocked by their network (confirmed: TCP connects, then gets reset the instant
+a payload is sent — not a credentials issue, tested extensively). Does **not** affect Render
+itself. Don't waste time re-diagnosing this if you hit it — ask the user to paste Render's logs
+instead, or check if you have network access Render-side.
 
 **Still true, unrelated to the above**: direct DB/Redis access to Neon/Upstash from the *user's
 local machine* is blocked by their network (confirmed: TCP connects, then gets reset the instant

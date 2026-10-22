@@ -61,13 +61,21 @@ Saving a reel/short got stuck in `"processing"` forever. **Root cause found and 
    `FFmpegExtractAudio` postprocessor. That subprocess call was hanging indefinitely in
    production (reason for the hang itself not fully root-caused — some interaction between
    yt-dlp's internal ffmpeg invocation and this specific container environment).
-6. **Fix**: stopped using yt-dlp's `FFmpegExtractAudio` postprocessor entirely.
-   `process_reel_url()` in `app/ingestion/media.py` now downloads the raw best-audio file with
-   no postprocessor, then converts it with the existing `extract_audio()` helper — a plain
-   `subprocess.run(["ffmpeg", ...])` call that bypasses yt-dlp's internal ffmpeg machinery
-   completely. `extract_audio()` already worked reliably elsewhere (voice notes, document
-   uploads), so this reuses a proven path instead of yt-dlp's. Verified end-to-end against a
-   real Instagram reel locally before pushing.
+6. First fix attempt (commit `dd127e4`): stopped using yt-dlp's `FFmpegExtractAudio`
+   postprocessor, downloading raw audio and converting it via `extract_audio()` instead.
+   **This looked right and passed a local test, but didn't actually fix it** — the exact same
+   crash recurred in production with an identical traceback. Lesson: removing our own
+   `postprocessors` entry wasn't enough, because it wasn't the actual trigger.
+7. **Real fix** (commit `236397c`): the traceback showed the hang was inside yt-dlp's
+   *automatic* `fixup()` step, which runs after every download regardless of configured
+   postprocessors — for this reel's format (an `"m4a_dash"` container), it decided to
+   auto-correct via `FFmpegFixupM4aPP`, which triggers the same hanging ffmpeg version-probe.
+   Set `"fixup": "never"` in `ydl_opts`, which short-circuits that step before it ever touches
+   ffmpeg (confirmed by reading yt-dlp's source: `if fixup_policy in ('ignore', 'never'):
+   return`). Safe here since `extract_audio()` does its own conversion afterward regardless of
+   the source container's quirks. Verified locally before pushing, **not yet confirmed against
+   a fresh production retry** — the first "verified" fix also looked solid locally and still
+   failed live, so don't trust this one either until a real Render retry confirms it.
 
 ## Operational gotchas learned this session
 
