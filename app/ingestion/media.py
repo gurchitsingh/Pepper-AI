@@ -2,6 +2,7 @@ import logging
 import os
 import subprocess
 import tempfile
+import time
 
 from dotenv import load_dotenv
 from faster_whisper import WhisperModel
@@ -77,16 +78,38 @@ def _transcribe_with_faster_whisper(audio_path: str) -> IngestResult:
 
 
 def extract_audio(source_path: str) -> str:
-    """Extract a 16kHz mono WAV from any audio/video file ffmpeg can read."""
+    """Extract a 16kHz mono WAV from any audio/video file ffmpeg can read.
+
+    stdin is redirected to DEVNULL (and -nostdin is passed): ffmpeg reads from
+    stdin by default, and in a container where the worker's stdin is a pipe that
+    never closes (e.g. Render's runtime) that makes the subprocess hang forever
+    -- which is exactly the 180s timeout we were seeing. Locally stdin is a
+    console so ffmpeg exits instantly, hence "works locally, fails hosted".
+    """
     fd, audio_path = tempfile.mkstemp(suffix=".wav")
     os.close(fd)
-    result = subprocess.run(
-        ["ffmpeg", "-y", "-i", source_path, "-ar", "16000", "-ac", "1", "-vn", audio_path],
-        capture_output=True,
-        text=True,
-    )
+    logger.info("extract_audio: starting ffmpeg conversion for %s", source_path)
+    started = time.time()
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-y", "-nostdin", "-i", source_path, "-ar", "16000", "-ac", "1", "-vn", audio_path],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        try:
+            os.remove(audio_path)
+        except OSError:
+            pass
+        raise IngestionError("ffmpeg timed out converting the audio (120s) -- likely a container/ffmpeg issue")
+    logger.info("extract_audio: ffmpeg conversion finished in %.2fs for %s", time.time() - started, source_path)
     if result.returncode != 0:
-        os.remove(audio_path)
+        try:
+            os.remove(audio_path)
+        except OSError:
+            pass
         raise IngestionError(f"ffmpeg could not extract audio from the file: {result.stderr[-500:]}")
     return audio_path
 
@@ -154,6 +177,7 @@ def process_reel_url(url: str) -> IngestResult:
             "quiet": True,
             "no_warnings": True,
             "fixup": "never",
+            "socket_timeout": 20,
         }
         logger.info("process_reel_url: starting yt-dlp download for %s", url)
         try:

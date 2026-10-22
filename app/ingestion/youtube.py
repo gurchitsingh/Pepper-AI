@@ -8,7 +8,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import CouldNotRetrieveTranscript
 
 from app.ingestion.common import IngestResult, IngestionError, Segment
-from app.ingestion.media import transcribe_audio
+from app.ingestion.media import extract_audio, transcribe_audio
 
 VIDEO_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
 
@@ -70,12 +70,17 @@ def _fetch_via_whisper(url: str) -> IngestResult:
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         out_template = os.path.join(tmp_dir, "audio.%(ext)s")
+        # Download raw, then convert via extract_audio() -- same approach as
+        # process_reel_url. yt-dlp's FFmpegExtractAudio postprocessor and the
+        # automatic fixup() step both invoke ffmpeg's version probe, which
+        # hangs in the Render container; "fixup": "never" skips that step.
         ydl_opts = {
             "format": "bestaudio/best",
             "outtmpl": out_template,
             "quiet": True,
             "no_warnings": True,
-            "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav"}],
+            "fixup": "never",
+            "socket_timeout": 20,
         }
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -83,10 +88,19 @@ def _fetch_via_whisper(url: str) -> IngestResult:
         except yt_dlp.utils.DownloadError as e:
             raise IngestionError(f"Could not download audio for Whisper fallback: {e}")
 
-        wav_path = os.path.join(tmp_dir, "audio.wav")
-        if not os.path.exists(wav_path):
+        downloaded_path = None
+        for name in os.listdir(tmp_dir):
+            if name.startswith("audio."):
+                downloaded_path = os.path.join(tmp_dir, name)
+                break
+        if not downloaded_path or not os.path.exists(downloaded_path):
             raise IngestionError("Whisper fallback: expected audio file was not produced")
-        return transcribe_audio(wav_path)
+
+        wav_path = extract_audio(downloaded_path)
+        try:
+            return transcribe_audio(wav_path)
+        finally:
+            os.remove(wav_path)
 
 
 def process(url: str) -> IngestResult:
