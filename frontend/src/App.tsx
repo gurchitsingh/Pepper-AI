@@ -1,9 +1,12 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "./theme/ThemeContext";
 import { AuthProvider, useAuth } from "./auth/AuthContext";
 import { ChatProvider } from "./chat/ChatContext";
 import { isOnboarded } from "./onboarding/onboardingStatus";
+import { Launch } from "./onboarding/Launch";
 import { Slides } from "./onboarding/Slides";
 import { Preferences } from "./onboarding/Preferences";
 import { ReferralSource } from "./onboarding/ReferralSource";
@@ -35,11 +38,14 @@ function RequireOnboarded({ children }: { children: ReactNode }) {
 }
 
 function App() {
+  const [showLaunch, setShowLaunch] = useState(true);
+
   return (
     <ThemeProvider>
       <AuthProvider>
         <ChatProvider>
           <BrowserRouter>
+            <AnimatePresence>{showLaunch && <Launch onDone={() => setShowLaunch(false)} />}</AnimatePresence>
             <Routes>
               <Route path="/welcome" element={<Landing />} />
               <Route path="/slides" element={<Slides />} />

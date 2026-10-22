@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, type PanInfo } from "framer-motion";
 import { ArrowRight } from "lucide-react";
+import { Mark } from "../components/Mark";
 import {
   MeetPepperIllustration,
   SaveAnythingIllustration,
@@ -107,9 +108,12 @@ export function Slides() {
 
   return (
     <div className="relative min-h-screen flex flex-col bg-bg">
-      <div className="absolute top-6 left-6 font-heading text-accent text-lg font-bold">
-        Pepper
-      </div>
+      {index !== 0 && (
+        <div className="absolute top-6 left-6 flex items-center gap-2">
+          <Mark size={26} />
+          <span className="font-heading text-text-primary text-lg font-bold">Pepper</span>
+        </div>
+      )}
 
       <div className="relative flex-grow overflow-hidden">
         <AnimatePresence custom={direction} initial={false}>
