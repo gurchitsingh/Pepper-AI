@@ -20,6 +20,14 @@ load_dotenv()
 # crash that produced zero log output even at points that should have logged.
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
+# Render injects RENDER_GIT_COMMIT at runtime. Surface it in /health and at
+# startup so the deployed build is identifiable from the outside -- Render has
+# silently kept serving an old image after a push before, which made a correct
+# fix look like a failed one (the "fixup: never" reel fix was never actually
+# live when it was retested).
+BUILD_COMMIT = os.getenv("RENDER_GIT_COMMIT", "dev")
+logging.getLogger(__name__).info("Pepper API starting -- build %s", BUILD_COMMIT)
+
 app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -48,4 +56,4 @@ app.include_router(billing.router)
 def health_check():
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
-    return {"status": "ok", "database": "connected"}
+    return {"status": "ok", "database": "connected", "build": BUILD_COMMIT[:7]}

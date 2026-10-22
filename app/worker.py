@@ -1,4 +1,5 @@
 import logging
+import os
 
 from rq import SimpleWorker
 
@@ -13,6 +14,11 @@ from app.queue import ingestion_queue, redis_conn
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
 logger = logging.getLogger(__name__)
+
+# Same build marker as app/main.py -- the worker and the API are separate
+# processes, so both need to say which commit they are running. On Render this
+# stays in the log even when the API is healthy on a stale image.
+BUILD_COMMIT = os.getenv("RENDER_GIT_COMMIT", "dev")
 
 
 def _recover_orphaned_jobs() -> None:
@@ -43,5 +49,6 @@ def _recover_orphaned_jobs() -> None:
 # SimpleWorker runs jobs in-process instead of forking a subprocess per job --
 # RQ's default Worker relies on os.fork(), which doesn't exist on Windows.
 if __name__ == "__main__":
+    logger.info("Ingestion worker starting -- build %s", BUILD_COMMIT)
     _recover_orphaned_jobs()
     SimpleWorker([ingestion_queue], connection=redis_conn).work()
