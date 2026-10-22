@@ -168,9 +168,9 @@ def process_reel_url(url: str) -> IngestResult:
         # for some reel formats (seen: an "m4a_dash" container) decides it
         # needs to auto-correct the file via FFmpegFixupM4aPP, which triggers
         # the same hanging ffmpeg version-probe through pp.available. "fixup":
-        # "never" skips that step entirely, before it ever touches ffmpeg --
-        # harmless here since we run our own extract_audio() conversion next
-        # regardless of the source container's quirks.
+        # "never" skips that step entirely, before it ever touches ffmpeg.
+        # We no longer run our own ffmpeg conversion on the result (see below),
+        # so skipping yt-dlp's fixup is both safe and required.
         ydl_opts = {
             "format": "bestaudio/best",
             "outtmpl": out_template,
@@ -191,11 +191,16 @@ def process_reel_url(url: str) -> IngestResult:
         if not os.path.exists(downloaded_path):
             raise IngestionError("Reel download: expected audio file was not produced")
 
-        wav_path = extract_audio(downloaded_path)
-        logger.info("process_reel_url: ffmpeg audio extraction finished for %s", url)
-        try:
-            result = transcribe_audio(wav_path)
-        finally:
-            os.remove(wav_path)
+        # Transcribe the downloaded file directly. Groq's Whisper endpoint
+        # accepts m4a (and faster-whisper decodes it via PyAV, verified
+        # locally on this exact file), so there is no need to run ffmpeg on
+        # it. ffmpeg's demuxer hangs on Render's container for these fMP4
+        # (m4a_dash) files even with stdin redirected (120s timeout fired
+        # in production), so avoiding ffmpeg entirely is the reliable fix.
+        # extract_audio() is still used by process_uploaded_file() for
+        # arbitrary user uploads.
+        logger.info("process_reel_url: starting transcription for %s", downloaded_path)
+        result = transcribe_audio(downloaded_path)
+        logger.info("process_reel_url: transcription finished for %s", downloaded_path)
         result.title = result.title or (info or {}).get("title") or (info or {}).get("description")
         return result
