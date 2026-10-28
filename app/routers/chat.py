@@ -1,6 +1,7 @@
 import logging
 import json
 import os
+import uuid
 from datetime import datetime, timezone
 from typing import Iterator
 
@@ -15,7 +16,7 @@ from app.database import SessionLocal, get_db
 from app.embeddings import EmbeddingError, embed_texts
 from app.retrieval import search_chunks
 from app.schemas import ChatRequest, ChatSource, SuggestedQuestionsOut, WebSource
-from app.models.models import ChatSession, Chunk, SavedItem, User
+from app.models.models import ChatMessage, ChatSession, Chunk, SavedItem, User
 from app.routers.chat_sessions import add_message, fetch_owned_session
 from app.web_search import WebSearchError, web_search
 
@@ -36,6 +37,14 @@ WEB_TOP_K = 5
 # hanging indefinitely, which also means the frontend's `loading` flag never clears
 # and silently blocks every later message for the rest of the session.
 GROQ_TIMEOUT_S = 30
+
+# Follow-up context: how many prior user/assistant pairs the model sees, and a hard
+# character budget so one long answer can't swamp the prompt. The budget is spent
+# newest-first (the most recent turn matters most for resolving "it"/"this"), and
+# any single message is also capped so one huge turn can't use up the whole budget.
+HISTORY_TURNS = 3
+HISTORY_MAX_CHARS = 4000
+HISTORY_MESSAGE_MAX_CHARS = 1500
 
 # How many of the user's most-recently-ready items to consider as suggestion
 # material, and how many candidate questions to ask the model for. We generate
@@ -64,7 +73,10 @@ SYSTEM_PROMPT = (
     "You answer questions using ONLY the provided excerpts from the user's own saved "
     "content. If the excerpts don't contain enough information to answer the question, "
     f"respond with exactly the token {INSUFFICIENT_CONTEXT_TOKEN} and nothing else -- "
-    "do not guess or use outside knowledge."
+    "do not guess or use outside knowledge. The earlier conversation may be included "
+    "before the current question; use it only to work out what words like \"it\", "
+    "\"this\", \"that reel\" or \"tell me more\" refer to. Facts in your answer must "
+    "still come from the provided excerpts, not from your own earlier replies."
 )
 
 WEB_SYSTEM_PROMPT = (
@@ -74,15 +86,25 @@ WEB_SYSTEM_PROMPT = (
     "current events, standings, scores, or anything else that changes over time. When "
     "results include dates, use the most recent one rather than defaulting to a fact you "
     "recall from training. Answer clearly and concisely based on those results; do not "
-    "add outside knowledge beyond what they contain."
+    "add outside knowledge beyond what they contain. The earlier conversation may be "
+    "included before the current question; use it only to work out what the question "
+    "refers to (e.g. \"and last year?\"), not as a source of facts."
 )
 
 
-def _generate_stream(client: Groq, system_prompt: str, user_message: str) -> Iterator[str]:
+def _generate_stream(
+    client: Groq,
+    system_prompt: str,
+    user_message: str,
+    history: list[dict] | None = None,
+) -> Iterator[str]:
+    # `history` is prior {"role", "content"} turns, placed between the system prompt and
+    # the current message. The excerpts / web results live only in `user_message`.
     stream = client.chat.completions.create(
         model=GROQ_CHAT_MODEL,
         messages=[
             {"role": "system", "content": system_prompt},
+            *(history or []),
             {"role": "user", "content": user_message},
         ],
         stream=True,
@@ -115,7 +137,7 @@ def _friendly_groq_error(e: APIError) -> str:
     return "Pepper couldn't reach its AI service right now. Please try again."
 
 
-def _stream_web_answer(client: Groq, question: str) -> Iterator[str]:
+def _stream_web_answer(client: Groq, question: str, history: list[dict] | None = None) -> Iterator[str]:
     try:
         results = web_search(question, max_results=WEB_TOP_K)
     except WebSearchError as e:
@@ -146,7 +168,7 @@ def _stream_web_answer(client: Groq, question: str) -> Iterator[str]:
     today = datetime.now(timezone.utc).strftime("%B %d, %Y")
     user_message = f"Today's date: {today}\n\nWeb search results:\n\n{context}\n\nQuestion: {question}"
 
-    for piece in _generate_stream(client, WEB_SYSTEM_PROMPT, user_message):
+    for piece in _generate_stream(client, WEB_SYSTEM_PROMPT, user_message, history):
         yield _sse("chunk", text=piece)
 
     yield _sse(
@@ -157,9 +179,12 @@ def _stream_web_answer(client: Groq, question: str) -> Iterator[str]:
     )
 
 
-def _stream_saved_content_answer(
-    client: Groq, question: str, results, sources: list[ChatSource]
+def _stream_saved_attempt(
+    client: Groq, question: str, results, history: list[dict] | None
 ) -> Iterator[str]:
+    """Asks the model to answer from `results`. Yields `chunk` events and returns True
+    if it answered; returns False (having yielded nothing) if it replied with the
+    INSUFFICIENT_CONTEXT sentinel, so the caller can try other excerpts or the web."""
     context_blocks = []
     for chunk, item in results:
         label = item.title or f"{item.source_type} item"
@@ -169,33 +194,148 @@ def _stream_saved_content_answer(
     user_message = f"Context from the user's saved content:\n\n{context}\n\nQuestion: {question}"
 
     # The model may answer with exactly INSUFFICIENT_CONTEXT_TOKEN and nothing else, which
-    # should trigger a silent fallback to web search rather than being shown to the user.
-    # Buffer just past the sentinel's length before forwarding anything, so we can still
-    # discard it and switch to the web-search stream without the sentinel ever reaching the client.
-    piece_iter = _generate_stream(client, SYSTEM_PROMPT, user_message)
+    # should trigger a fallback rather than being shown to the user. Buffer just past the
+    # sentinel's length before forwarding anything, so it can still be discarded without
+    # ever reaching the client -- this holds on every attempt, including the carry-over retry.
+    piece_iter = _generate_stream(client, SYSTEM_PROMPT, user_message, history)
     buffer = ""
     for piece in piece_iter:
         buffer += piece
-        if len(buffer) > len(INSUFFICIENT_CONTEXT_TOKEN):
+        if len(buffer.lstrip()) > len(INSUFFICIENT_CONTEXT_TOKEN):
             break
 
-    if buffer.strip() == INSUFFICIENT_CONTEXT_TOKEN:
+    if buffer.lstrip().startswith(INSUFFICIENT_CONTEXT_TOKEN):
         for _ in piece_iter:  # drain in case the model kept generating past the sentinel
             pass
-        yield from _stream_web_answer(client, question)
-        return
+        return False
 
     if buffer:
         yield _sse("chunk", text=buffer)
     for piece in piece_iter:
         yield _sse("chunk", text=piece)
+    return True
 
-    yield _sse(
-        "done",
-        sources=[s.model_dump(mode="json") for s in sources],
-        web_sources=[],
-        answer_source="saved_content",
+
+def _stream_answer(
+    client: Groq,
+    question: str,
+    history: list[dict],
+    results,
+    sources: list[ChatSource],
+    carry_results,
+    carry_sources: list[ChatSource],
+) -> Iterator[str]:
+    """Saved-content answer with fallbacks, in order: the freshly retrieved excerpts,
+    then the previous turn's excerpts (carry-over), then a live web search. The `done`
+    event's sources are whichever excerpts the answer actually came from."""
+    if results:
+        if (yield from _stream_saved_attempt(client, question, results, history)):
+            yield _sse(
+                "done",
+                sources=[s.model_dump(mode="json") for s in sources],
+                web_sources=[],
+                answer_source="saved_content",
+            )
+            return
+
+    # Skip the retry if it would just repeat the same excerpts we already tried.
+    if carry_results and {c.id for c, _ in carry_results} != {c.id for c, _ in results}:
+        if (yield from _stream_saved_attempt(client, question, carry_results, history)):
+            yield _sse(
+                "done",
+                sources=[s.model_dump(mode="json") for s in carry_sources],
+                web_sources=[],
+                answer_source="saved_content",
+            )
+            return
+
+    yield from _stream_web_answer(client, question, history)
+
+
+def _load_history(db: Session, session_id, user_id) -> list[ChatMessage]:
+    """The last HISTORY_TURNS user/assistant pairs of a session, oldest first. Returns []
+    for no/unknown/foreign sessions so /chat behaves exactly as before for a first
+    message. Must run before the current user message is saved, or it would appear in
+    its own history."""
+    if session_id is None:
+        return []
+    owned = (
+        db.query(ChatSession.id)
+        .filter(ChatSession.id == session_id, ChatSession.user_id == user_id)
+        .first()
     )
+    if owned is None:
+        return []
+    rows = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.session_id == session_id)
+        .order_by(ChatMessage.created_at.desc())
+        .limit(HISTORY_TURNS * 2)
+        .all()
+    )
+    return list(reversed(rows))
+
+
+def _history_for_prompt(messages: list[ChatMessage]) -> list[dict]:
+    """Applies the character budget, newest turns first, and shapes for the chat API."""
+    kept: list[dict] = []
+    remaining = HISTORY_MAX_CHARS
+    for m in reversed(messages):
+        if remaining <= 0:
+            break
+        text = (m.content or "").strip()[: min(HISTORY_MESSAGE_MAX_CHARS, remaining)]
+        if not text:
+            continue
+        kept.append({"role": m.role, "content": text})
+        remaining -= len(text)
+    kept.reverse()
+    # Don't open with an orphaned assistant reply left over after truncation.
+    while kept and kept[0]["role"] != "user":
+        kept.pop(0)
+    return kept
+
+
+def _carry_over(db: Session, messages: list[ChatMessage], user_id):
+    """Re-fetches the chunks the previous assistant turn cited, if it answered from saved
+    content. Goes back to the DB (matching saved_item_id + chunk text, scoped to the user)
+    rather than trusting the stored text, so deleted or no-longer-owned items drop out."""
+    prev = next((m for m in reversed(messages) if m.role == "assistant"), None)
+    if prev is None or prev.answer_source != "saved_content" or not prev.sources:
+        return [], []
+
+    results, sources, seen = [], [], set()
+    for src in prev.sources:
+        try:
+            item_id = uuid.UUID(str(src["saved_item_id"]))
+            text = src["chunk_text"]
+        except (KeyError, ValueError, TypeError):
+            continue
+        row = (
+            db.query(Chunk, SavedItem)
+            .join(SavedItem, SavedItem.id == Chunk.saved_item_id)
+            .filter(
+                SavedItem.user_id == user_id,
+                Chunk.saved_item_id == item_id,
+                Chunk.text == text,
+            )
+            .first()
+        )
+        if row is None or row[0].id in seen:
+            continue
+        seen.add(row[0].id)
+        chunk, item = row
+        results.append(row)
+        sources.append(
+            ChatSource(
+                saved_item_id=item.id,
+                title=item.title,
+                source_type=item.source_type,
+                chunk_text=chunk.text,
+                start_time=chunk.start_time,
+                end_time=chunk.end_time,
+            )
+        )
+    return results, sources
 
 
 @router.post("/chat")
@@ -213,6 +353,16 @@ def chat(
             detail="GROQ_API_KEY is not set in .env. Get one at https://console.groq.com/keys",
         )
 
+    # Read prior turns first: the current message is saved just below and must not
+    # show up in its own history.
+    prior = _load_history(db, payload.session_id, current_user.id)
+    history = _history_for_prompt(prior)
+    prev_user = next((m.content for m in reversed(prior) if m.role == "user"), None)
+    # A follow-up like "what is this about?" has no content words of its own, so retrieve
+    # on it together with the previous question. The question alone is kept as a second
+    # attempt so a genuinely new topic isn't diluted out of range by the old one.
+    retrieval_query = f"{prev_user}\n{payload.question}" if prev_user else payload.question
+
     # Persist the session + user message before streaming so the conversation
     # exists (and is titled) even if the stream later fails or is aborted.
     if payload.session_id is not None:
@@ -225,17 +375,23 @@ def chat(
     add_message(db, chat_session, "user", payload.question)
     session_id = chat_session.id
 
-    query_vector = None
+    query_texts = [retrieval_query] if retrieval_query == payload.question else [retrieval_query, payload.question]
+    vectors = None
     try:
-        [query_vector] = embed_texts([payload.question], input_type="query")
-    except EmbeddingError:
-        query_vector = None
+        vectors = embed_texts(query_texts, input_type="query")
+    except EmbeddingError as e:
+        logger.warning("Query embedding failed, falling back to keyword matching: %s", e)
+        vectors = None
 
-    if query_vector is not None:
-        results = search_chunks(db, query_vector, user_id=current_user.id, top_k=TOP_K)
+    if vectors is not None:
+        results = []
+        for vector in vectors:
+            results = search_chunks(db, vector, user_id=current_user.id, top_k=TOP_K)
+            if results:
+                break
     else:
         # Graceful fallback: match keywords across the user's saved content
-        keywords = [w.lower().strip("?,.!'\"") for w in payload.question.split() if len(w) > 2]
+        keywords = [w.lower().strip("?,.!'\"") for w in retrieval_query.split() if len(w) > 2]
         user_chunks = (
             db.query(Chunk, SavedItem)
             .join(SavedItem, SavedItem.id == Chunk.saved_item_id)
@@ -252,6 +408,9 @@ def chat(
         if not results and user_chunks:
             results = [(c, item) for _, c, item in scored[:TOP_K]]
     client = Groq(api_key=GROQ_API_KEY, timeout=GROQ_TIMEOUT_S)
+    # Fetched eagerly (not lazily inside generate()) because the route's db session may be
+    # closed by the time the stream runs; see save_assistant_message below.
+    carry_results, carry_sources = _carry_over(db, prior, current_user.id)
 
     sources = [
         ChatSource(
@@ -289,10 +448,9 @@ def chat(
         yield _sse("session", session_id=str(session_id))
         answer = ""
         try:
-            if not results:
-                stream = _stream_web_answer(client, payload.question)
-            else:
-                stream = _stream_saved_content_answer(client, payload.question, results, sources)
+            stream = _stream_answer(
+                client, payload.question, history, results, sources, carry_results, carry_sources
+            )
             for raw in stream:
                 event = json.loads(raw[len("data: "):])
                 if event["type"] == "chunk":
