@@ -1,5 +1,5 @@
 import { ApiError, apiFetch, apiFetchBlob, apiFetchSse } from "./client";
-import type { BillingStatus, ChatResponse, ChatStreamEvent, Folder, Insights, SavedItem, SuggestedQuestionsOut, Token, UserOut } from "./types";
+import type { BillingStatus, ChatMessageCreate, ChatResponse, ChatSession, ChatSessionDetail, ChatSessionMessage, ChatStreamEvent, Folder, Insights, SavedItem, SuggestedQuestionsOut, Token, UserOut } from "./types";
 
 export function signup(email: string, password: string, name?: string) {
   return apiFetch<Token>("/auth/signup", {
@@ -132,24 +132,58 @@ export function getInsights() {
   return apiFetch<Insights>("/insights");
 }
 
-export async function chat(question: string, onChunk?: (text: string) => void, signal?: AbortSignal): Promise<ChatResponse> {
-  let answer = "";
-  let sources: ChatResponse["sources"] = [];
+export async function chat(
+  question: string,
+  onChunk?: (text: string) => void,
+  signal?: AbortSignal,
+  sessionId?: string | null,
+  onSession?: (sessionId: string) => void,
+): Promise<ChatResponse> {
+  const result: ChatResponse = { answer: "", sources: [], web_sources: [], answer_source: null, session_id: sessionId ?? null };
   await apiFetchSse<ChatStreamEvent>("/chat", {
     method: "POST",
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, session_id: sessionId ?? null }),
     signal,
   }, (event) => {
-    if (event.type === "chunk") {
-      answer += event.text;
+    if (event.type === "session") {
+      result.session_id = event.session_id;
+      onSession?.(event.session_id);
+    } else if (event.type === "chunk") {
+      result.answer += event.text;
       onChunk?.(event.text);
     } else if (event.type === "done") {
-      sources = event.sources;
+      result.sources = event.sources;
+      result.web_sources = event.web_sources;
+      result.answer_source = event.answer_source;
+      result.session_id = event.session_id ?? result.session_id;
     } else {
       throw new ApiError(500, event.detail);
     }
   });
-  return { answer, sources };
+  return result;
+}
+
+export function listChatSessions() {
+  return apiFetch<ChatSession[]>("/chat/sessions");
+}
+
+export function getChatSession(id: string) {
+  return apiFetch<ChatSessionDetail>(`/chat/sessions/${id}`);
+}
+
+export function createChatSession() {
+  return apiFetch<ChatSession>("/chat/sessions", { method: "POST" });
+}
+
+export function appendChatMessage(id: string, payload: ChatMessageCreate) {
+  return apiFetch<ChatSessionMessage>(`/chat/sessions/${id}/messages`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteChatSession(id: string) {
+  return apiFetch<void>(`/chat/sessions/${id}`, { method: "DELETE" });
 }
 
 export function getSuggestedQuestions() {

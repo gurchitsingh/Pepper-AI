@@ -11,11 +11,12 @@ from groq import APIError, Groq
 from sqlalchemy.orm import Session
 
 from app.auth import get_current_user
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.embeddings import EmbeddingError, embed_texts
 from app.retrieval import search_chunks
 from app.schemas import ChatRequest, ChatSource, SuggestedQuestionsOut, WebSource
-from app.models.models import Chunk, SavedItem, User
+from app.models.models import ChatSession, Chunk, SavedItem, User
+from app.routers.chat_sessions import add_message, fetch_owned_session
 from app.web_search import WebSearchError, web_search
 
 load_dotenv()
@@ -212,6 +213,18 @@ def chat(
             detail="GROQ_API_KEY is not set in .env. Get one at https://console.groq.com/keys",
         )
 
+    # Persist the session + user message before streaming so the conversation
+    # exists (and is titled) even if the stream later fails or is aborted.
+    if payload.session_id is not None:
+        chat_session = fetch_owned_session(db, payload.session_id, current_user)
+    else:
+        chat_session = ChatSession(user_id=current_user.id)
+        db.add(chat_session)
+        db.commit()
+        db.refresh(chat_session)
+    add_message(db, chat_session, "user", payload.question)
+    session_id = chat_session.id
+
     query_vector = None
     try:
         [query_vector] = embed_texts([payload.question], input_type="query")
@@ -252,12 +265,44 @@ def chat(
         for chunk, item in results
     ]
 
+    def save_assistant_message(text: str, done: dict) -> None:
+        # The route's `db` may already be closed by the time this generator runs
+        # (yield-dependency teardown vs. StreamingResponse ordering), so use a
+        # short-lived session of our own for the final write.
+        write_db = SessionLocal()
+        try:
+            owned = write_db.get(ChatSession, session_id)
+            if owned is not None:
+                add_message(
+                    write_db,
+                    owned,
+                    "assistant",
+                    text,
+                    sources=done.get("sources"),
+                    web_sources=done.get("web_sources"),
+                    answer_source=done.get("answer_source"),
+                )
+        finally:
+            write_db.close()
+
     def generate() -> Iterator[str]:
+        yield _sse("session", session_id=str(session_id))
+        answer = ""
         try:
             if not results:
-                yield from _stream_web_answer(client, payload.question)
+                stream = _stream_web_answer(client, payload.question)
             else:
-                yield from _stream_saved_content_answer(client, payload.question, results, sources)
+                stream = _stream_saved_content_answer(client, payload.question, results, sources)
+            for raw in stream:
+                event = json.loads(raw[len("data: "):])
+                if event["type"] == "chunk":
+                    answer += event["text"]
+                elif event["type"] == "done":
+                    # Only a successfully finished stream is saved; an error event or
+                    # a client abort (GeneratorExit) never reaches this point.
+                    save_assistant_message(answer, event)
+                    raw = _sse("done", **{k: v for k, v in event.items() if k != "type"}, session_id=str(session_id))
+                yield raw
         except APIError as e:
             yield _sse("error", detail=_friendly_groq_error(e))
         except Exception as e:

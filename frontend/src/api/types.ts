@@ -41,9 +41,43 @@ export interface ChatSource {
   end_time: number | null;
 }
 
+export type AnswerSource = "saved_content" | "web_search" | "small_talk";
+
 export interface ChatResponse {
   answer: string;
   sources: ChatSource[];
+  web_sources: WebSource[];
+  answer_source: AnswerSource | null;
+  session_id: string | null;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatSessionMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  sources: ChatSource[] | null;
+  web_sources: WebSource[] | null;
+  answer_source: AnswerSource | null;
+  created_at: string;
+}
+
+export interface ChatSessionDetail extends ChatSession {
+  messages: ChatSessionMessage[];
+}
+
+export interface ChatMessageCreate {
+  role: "user" | "assistant";
+  content: string;
+  sources?: ChatSource[];
+  web_sources?: WebSource[];
+  answer_source?: AnswerSource;
 }
 
 export interface SuggestedQuestionsOut {
@@ -93,11 +127,13 @@ export interface WebSource {
 }
 
 export type ChatStreamEvent =
+  | { type: "session"; session_id: string }
   | { type: "chunk"; text: string }
   | {
       type: "done";
       sources: ChatSource[];
       web_sources: WebSource[];
       answer_source: "saved_content" | "web_search";
+      session_id: string;
     }
   | { type: "error"; detail: string };

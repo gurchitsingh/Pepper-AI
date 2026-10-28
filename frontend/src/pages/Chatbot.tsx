@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, animate, motion } from "framer-motion";
-import { Send, FileText, Link2, Mic, FileImage, Plus, ChevronDown } from "lucide-react";
+import { Send, FileText, Link2, Mic, FileImage, Plus, ChevronDown, History } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
 import type { ChatSource, SavedItem } from "../api/types";
@@ -12,6 +13,7 @@ import { ThinkingIndicator } from "../components/ThinkingIndicator";
 import { CompleteIndicator } from "../components/CompleteIndicator";
 import { MarkdownMessage } from "../components/MarkdownMessage";
 import { ExpandableSearch } from "../components/ExpandableSearch";
+import { ChatHistoryDrawer } from "../components/ChatHistoryDrawer";
 import { Mark } from "../components/Mark";
 import { EASE_OUT } from "../lib/motion";
 
@@ -100,7 +102,7 @@ function SourceCard({ source }: { source: ChatSource }) {
 }
 
 export function Chatbot() {
-  const { messages, setMessages, newSession } = useChat();
+  const { messages, setMessages, activeSessionId, setActiveSessionId, ensureSession, epochRef, loadSession, newSession, deleteSession } = useChat();
   const location = useLocation();
   const navigate = useNavigate();
   const [question, setQuestion] = useState("");
@@ -111,6 +113,7 @@ export function Chatbot() {
   const [completeFading, setCompleteFading] = useState(false);
   const completeTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [messageQuery, setMessageQuery] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
@@ -245,14 +248,32 @@ export function Chatbot() {
     setMessages((prev) => [...prev, userMessage]);
     setQuestion("");
 
+    const epoch = epochRef.current;
     const smallTalk = detectSmallTalk(q);
     if (smallTalk) {
       setLoading(true);
+      // Small-talk never reaches /chat, so persist both turns here. Failures are
+      // swallowed: the chat itself still works, it just won't appear in history.
+      const sessionPromise = ensureSession(epoch)
+        .then(async (sid) => {
+          await api.appendChatMessage(sid, { role: "user", content: q });
+          return sid;
+        })
+        .catch(() => null);
       await new Promise((resolve) => setTimeout(resolve, 300 + Math.random() * 250));
+      const sid = await sessionPromise;
       const replyId = crypto.randomUUID();
-      setMessages((prev) => [...prev, { id: replyId, role: "assistant", content: smallTalk.reply }]);
-      setLoading(false);
-      flashComplete(replyId);
+      if (epochRef.current === epoch) {
+        setMessages((prev) => [
+          ...prev,
+          { id: replyId, role: "assistant", content: smallTalk.reply, answerSource: "small_talk" },
+        ]);
+        setLoading(false);
+        flashComplete(replyId);
+      }
+      if (sid) {
+        api.appendChatMessage(sid, { role: "assistant", content: smallTalk.reply, answer_source: "small_talk" }).catch(() => {});
+      }
       return;
     }
 
@@ -268,9 +289,20 @@ export function Chatbot() {
         setMessages((prev) => prev.map((message) => (
           message.id === replyId ? { ...message, content: message.content + chunk } : message
         )));
-      }, controller.signal);
+      }, controller.signal, activeSessionId, (sid) => {
+        // Learn the session id as early as possible so it survives a mid-stream failure.
+        if (activeRequestRef.current === controller) setActiveSessionId(sid);
+      });
       setMessages((prev) => prev.map((message) => (
-        message.id === replyId ? { ...message, content: res.answer, sources: res.sources } : message
+        message.id === replyId
+          ? {
+              ...message,
+              content: res.answer,
+              sources: res.sources,
+              webSources: res.web_sources,
+              answerSource: res.answer_source ?? undefined,
+            }
+          : message
       )));
       flashComplete(replyId);
     } catch (err) {
@@ -293,10 +325,14 @@ export function Chatbot() {
     submitQuestion(question);
   }
 
-  function handleNewChat() {
+  function abortInFlight() {
     activeRequestRef.current?.abort();
     activeRequestRef.current = null;
     setLoading(false);
+  }
+
+  function handleNewChat() {
+    abortInFlight();
     newSession();
   }
 
@@ -304,15 +340,25 @@ export function Chatbot() {
     <div className="fixed inset-x-0 top-16 bottom-[72px] max-w-[700px] mx-auto w-full px-6 pt-6 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-text-primary text-2xl font-bold">Chat with Pepper</h2>
-        <button
-          type="button"
-          onClick={handleNewChat}
-          disabled={messages.length === 0 && !loading}
-          className="flex items-center gap-1 text-text-primary text-sm font-medium px-3.5 py-1.5 rounded-full border border-text-secondary/20 hover:border-accent hover:text-accent disabled:opacity-40 transition-colors"
-        >
-          <Plus size={14} />
-          New Chat
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHistoryOpen(true)}
+            aria-label="Chat history"
+            className="w-9 h-9 flex items-center justify-center text-text-primary rounded-full border border-text-secondary/20 hover:border-accent hover:text-accent transition-colors"
+          >
+            <History size={16} />
+          </button>
+          <button
+            type="button"
+            onClick={handleNewChat}
+            disabled={messages.length === 0 && !loading}
+            className="flex items-center gap-1 text-text-primary text-sm font-medium px-3.5 py-1.5 rounded-full border border-text-secondary/20 hover:border-accent hover:text-accent disabled:opacity-40 transition-colors"
+          >
+            <Plus size={14} />
+            New Chat
+          </button>
+        </div>
       </div>
 
       <div className="flex justify-end">
@@ -469,6 +515,22 @@ export function Chatbot() {
           <Send size={18} />
         </motion.button>
       </form>
+
+      {/* Portaled: this page's wrapper is `fixed`, which would trap the sheet's z-index
+          beneath the bottom nav. */}
+      {createPortal(
+        <AnimatePresence>
+        {historyOpen && (
+          <ChatHistoryDrawer
+            activeSessionId={activeSessionId}
+            onClose={() => setHistoryOpen(false)}
+            onSelect={(id) => loadSession(id, abortInFlight)}
+            onDelete={(id) => deleteSession(id, abortInFlight)}
+          />
+        )}
+        </AnimatePresence>,
+        document.body,
+      )}
     </div>
   );
 }

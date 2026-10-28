@@ -116,6 +116,7 @@ class SegmentOut(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str
+    session_id: uuid.UUID | None = None
 
 
 class ChatSource(BaseModel):
@@ -138,6 +139,42 @@ class ChatResponse(BaseModel):
     sources: list[ChatSource] = Field(default_factory=list)
     web_sources: list[WebSource] = Field(default_factory=list)
     answer_source: Literal["saved_content", "web_search"]
+
+
+AnswerSource = Literal["saved_content", "web_search", "small_talk"]
+
+
+class ChatMessageCreate(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+    sources: list[ChatSource] | None = None
+    web_sources: list[WebSource] | None = None
+    answer_source: AnswerSource | None = None
+
+
+class ChatMessageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    role: str
+    content: str
+    sources: list[ChatSource] | None = None
+    web_sources: list[WebSource] | None = None
+    answer_source: str | None = None
+    created_at: datetime
+
+
+class ChatSessionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ChatSessionDetailOut(ChatSessionOut):
+    messages: list[ChatMessageOut]
 
 
 class SuggestedQuestionsOut(BaseModel):
