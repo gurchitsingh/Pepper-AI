@@ -38,7 +38,11 @@ function RequireOnboarded({ children }: { children: ReactNode }) {
 }
 
 function App() {
-  const [showLaunch, setShowLaunch] = useState(true);
+  const [showLaunch, setShowLaunch] = useState(() => {
+    if (sessionStorage.getItem("pepper_launched")) return false;
+    sessionStorage.setItem("pepper_launched", "1");
+    return true;
+  });
 
   return (
     <ThemeProvider>
@@ -46,7 +50,7 @@ function App() {
         <ChatProvider>
           <BrowserRouter>
             <AnimatePresence>{showLaunch && <Launch onDone={() => setShowLaunch(false)} />}</AnimatePresence>
-            <Routes>
+            {!showLaunch && <Routes>
               <Route path="/welcome" element={<Landing />} />
               <Route path="/slides" element={<Slides />} />
               <Route path="/login" element={<Login />} />
@@ -83,7 +87,7 @@ function App() {
                 <Route path="/settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            </Routes>}
           </BrowserRouter>
         </ChatProvider>
       </AuthProvider>
