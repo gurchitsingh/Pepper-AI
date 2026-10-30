@@ -13,7 +13,7 @@ export function Launch({ onDone }: { onDone: () => void }) {
     <motion.div
       initial={{ opacity: 1 }}
       exit={{ opacity: 0, transition: { duration: 0.3 } }}
-      className="fixed inset-0 bg-accent text-accent-contrast flex flex-col"
+      className="fixed inset-0 z-[100] bg-accent text-accent-contrast flex flex-col"
     >
       <div className="flex-1 flex items-center justify-center pb-10">
         <motion.span
