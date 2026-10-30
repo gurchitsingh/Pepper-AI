@@ -32,7 +32,7 @@ function NavItem({ to, label, Icon, end }: { to: string; label: string; Icon: ty
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 left-0 w-full h-[88px] z-50 bg-bg shadow-[0_-1px_0_var(--line)]">
+    <nav className="fixed bottom-0 left-0 w-full h-[calc(88px+env(safe-area-inset-bottom))] pb-[env(safe-area-inset-bottom)] z-50 bg-bg shadow-[0_-1px_0_var(--line)]">
       <div className="flex items-start h-full px-2 pt-1.5 max-w-[600px] mx-auto">
         {NAV_ITEMS.map((item) => (
           <NavItem key={item.to} {...item} />

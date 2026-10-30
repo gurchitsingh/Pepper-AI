@@ -337,7 +337,7 @@ export function Chatbot() {
   }
 
   return (
-    <div className="fixed inset-x-0 top-16 bottom-[72px] max-w-[700px] mx-auto w-full px-6 pt-6 flex flex-col gap-4">
+    <div className="fixed inset-x-0 top-16 bottom-[calc(88px+env(safe-area-inset-bottom))] max-w-[700px] mx-auto w-full px-6 pt-6 flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h2 className="font-heading text-text-primary text-2xl font-bold">Chat with Pepper</h2>
         <div className="flex items-center gap-2">
