@@ -9,6 +9,8 @@ interface ExpandableSearchProps {
   placeholder?: string;
   ariaLabel?: string;
   className?: string;
+  // Matches the 36px icon buttons used in page headers.
+  compact?: boolean;
 }
 
 export function ExpandableSearch({
@@ -18,6 +20,7 @@ export function ExpandableSearch({
   placeholder = "Search...",
   ariaLabel = "Search",
   className = "",
+  compact = false,
 }: ExpandableSearchProps) {
   const [expanded, setExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,18 +52,18 @@ export function ExpandableSearch({
     <motion.div
       layout
       initial={false}
-      animate={{ width: expanded ? "100%" : 44 }}
+      animate={{ width: expanded ? "100%" : compact ? 36 : 44 }}
       transition={{ type: "spring", stiffness: 420, damping: 34 }}
-      className={`h-11 max-w-full bg-surface border border-text-secondary/20 rounded-full flex items-center overflow-hidden ${className}`}
+      className={`${compact ? "h-9" : "h-11"} max-w-full bg-surface border border-text-secondary/20 rounded-full flex items-center overflow-hidden ${className}`}
     >
       <button
         type="button"
         onClick={toggle}
         aria-label={expanded ? "Collapse search" : ariaLabel}
         aria-expanded={expanded}
-        className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-text-secondary hover:text-accent transition-colors"
+        className={`shrink-0 ${compact ? "w-9 h-9" : "w-11 h-11"} rounded-full flex items-center justify-center text-text-secondary hover:text-accent transition-colors`}
       >
-        <Search size={18} />
+        <Search size={compact ? 16 : 18} />
       </button>
       <AnimatePresence>
         {expanded && (

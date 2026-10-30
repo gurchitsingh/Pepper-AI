@@ -338,9 +338,9 @@ export function Chatbot() {
 
   return (
     <div className="fixed inset-x-0 top-16 bottom-[calc(88px+env(safe-area-inset-bottom))] max-w-[700px] mx-auto w-full px-6 pt-6 flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-heading text-text-primary text-2xl font-bold">Chat with Pepper</h2>
-        <div className="flex items-center gap-2">
+      <div className="relative flex items-center justify-between gap-3">
+        <h2 className="min-w-0 truncate font-heading text-text-primary text-xl sm:text-2xl font-bold">Chat with Pepper</h2>
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => setHistoryOpen(true)}
@@ -353,21 +353,26 @@ export function Chatbot() {
             type="button"
             onClick={handleNewChat}
             disabled={messages.length === 0 && !loading}
-            className="flex items-center gap-1 text-text-primary text-sm font-medium px-3.5 py-1.5 rounded-full border border-text-secondary/20 hover:border-accent hover:text-accent disabled:opacity-40 transition-colors"
+            aria-label="New Chat"
+            className="h-9 flex items-center gap-1 text-text-primary text-sm font-medium px-2.5 sm:px-3.5 rounded-full border border-text-secondary/20 hover:border-accent hover:text-accent disabled:opacity-40 transition-colors"
           >
             <Plus size={14} />
-            New Chat
+            <span className="hidden sm:inline">New Chat</span>
           </button>
+          {/* Holds the collapsed search button's spot; the search itself lives in the overlay below. */}
+          <div className="w-9 h-9 shrink-0" aria-hidden="true" />
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <ExpandableSearch
-          value={messageQuery}
-          onChange={setMessageQuery}
-          placeholder="Search this conversation..."
-          ariaLabel="Search this conversation"
-        />
+        {/* Overlay so the expanded search covers this row instead of adding a row of its own. */}
+        <div className="absolute inset-0 flex items-center justify-end pointer-events-none">
+          <ExpandableSearch
+            compact
+            value={messageQuery}
+            onChange={setMessageQuery}
+            placeholder="Search this conversation..."
+            ariaLabel="Search this conversation"
+            className="pointer-events-auto"
+          />
+        </div>
       </div>
 
       <div className="relative flex-grow min-h-0">
@@ -482,8 +487,10 @@ export function Chatbot() {
         </AnimatePresence>
       </div>
 
+      {/* -mx-6 px-6: bleeds to the screen edges so chips scroll off-screen rather than being cut
+          at the page padding, and keeps 24px of space after the last chip when scrolled to the end. */}
       {suggestions.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-6 px-6">
           {suggestions.map((q) => (
             <button
               key={q}
