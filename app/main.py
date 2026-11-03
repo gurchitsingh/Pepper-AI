@@ -35,7 +35,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Comma-separated in .env so each environment (local dev, Vercel, a Capacitor app's
 # origin) sets its own list without touching code. Falls back to local dev defaults
 # so nothing breaks if the var isn't set yet.
-_default_origins = "http://localhost:3000,http://localhost:3001"
+_default_origins = "http://localhost:3000,http://localhost:3001,http://localhost:3100"
 CORS_ORIGINS = [origin.strip() for origin in os.getenv("CORS_ORIGINS", _default_origins).split(",") if origin.strip()]
 
 app.add_middleware(

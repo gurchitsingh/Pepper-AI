@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
-/* Dark mode (default): Orange + Black */
+/* Dark mode (default), mirrored from THEMES[0] in theme/themes.ts.
+   This is the only place theme colors are duplicated: it exists purely so
+   the page paints correctly before React mounts. Every theme (including
+   this one, once mounted) is applied from themes.ts via ThemeContext's
+   applyThemeColors, which is the single source of truth for color values —
+   update themes.ts, not this block, when a color changes. */
 :root {
   --bg: #121212;
   --surface: #201c1a;

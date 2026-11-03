@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Camera, Users, Ticket, CirclePlay, Briefcase, Search, Sparkles, Ellipsis } from "lucide-react";
 import { setOnboarded } from "./onboardingStatus";
+import { updateMe } from "../api/endpoints";
+import { useAuth } from "../auth/AuthContext";
 
 const SOURCES = [
   { label: "Instagram", desc: "Reels and stories", Icon: Camera },
@@ -16,11 +18,21 @@ const SOURCES = [
 
 export function ReferralSource() {
   const [selected, setSelected] = useState<string | null>(null);
+  const [finishing, setFinishing] = useState(false);
+  const { refreshUser } = useAuth();
   const navigate = useNavigate();
 
-  function handleFinish() {
-    // No backend field for referral source yet — captured locally only.
-    console.log("Heard about Pepper via:", selected);
+  async function handleFinish() {
+    if (!selected || finishing) return;
+    setFinishing(true);
+    try {
+      await updateMe({ referral_source: selected, onboarding_completed: true });
+      await refreshUser();
+    } catch {
+      // non-fatal: localStorage fallback still marks onboarding complete
+    } finally {
+      setFinishing(false);
+    }
     setOnboarded();
     navigate("/");
   }
@@ -64,10 +76,10 @@ export function ReferralSource() {
         </div>
         <button
           onClick={handleFinish}
-          disabled={!selected}
+          disabled={!selected || finishing}
           className="btn-accent font-medium h-12 rounded-full disabled:opacity-50"
         >
-          Finish
+          {finishing ? "Finishing..." : "Finish"}
         </button>
       </div>
     </div>

@@ -110,6 +110,12 @@
       "port": 3100
     },
     {
+      "name": "fix-redesign-fidelity-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-wt/fix-redesign-fidelity/frontend && npm run dev -- --port 3104 --strictPort"],
+      "port": 3104
+    },
+    {
       "name": "audit-main-frontend",
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/audit-main/frontend && npm run dev -- --port 3101 --strictPort"],
