@@ -223,10 +223,7 @@ export function Settings() {
       </div>
 
       <section className="flex flex-col gap-3">
-        <div>
-          <h3 className={EYEBROW}>Interface</h3>
-          <p className="text-text-secondary text-sm mt-1">Choose your preferred visual atmosphere.</p>
-        </div>
+        <h3 className={EYEBROW}>Interface</h3>
         <div className="grid grid-cols-2 gap-3">
           {THEMES.map((t) => {
             const selected = themeId === t.id;
@@ -348,7 +345,7 @@ export function Settings() {
                 <p className="text-text-primary text-sm">
                   {Math.round(billing.total_seconds / 60)} / {Math.round(billing.limit_seconds / 60)} min used
                 </p>
-                <p className="text-text-secondary text-xs">Free plan monthly content limit</p>
+                <p className="text-text-secondary text-xs">Monthly limit</p>
               </div>
             </div>
             <div className="h-1.5 w-full rounded-full bg-text-secondary/15 overflow-hidden">
@@ -421,7 +418,6 @@ export function Settings() {
 
       <div className="flex flex-col items-center gap-2 -mt-2">
         <Mark size={28} />
-        <p className="text-text-secondary/50 text-xs text-center">Pepper AI &middot; Built with intention.</p>
       </div>
 
       <AnimatePresence>

@@ -9,7 +9,6 @@ import {
   Link2,
   PlayCircle,
   Square,
-  ArrowRight,
 } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
@@ -20,13 +19,14 @@ import { relativeTime } from "../lib/format";
 type Feedback = { type: "success" | "error"; message: string };
 
 const ENTRY_POINTS = [
-  { id: "click-picture", label: "Camera", desc: "Snap it with your camera", Icon: Camera },
-  { id: "voice", label: "Voice", desc: "Speak it — Pepper transcribes as you go", Icon: Mic },
-  { id: "note", label: "Notes", desc: "Jot it down before it slips away", Icon: PenLine },
-  { id: "link", label: "Links", desc: "Drop in an article, video, or post", Icon: Link2 },
+  { id: "link", label: "Link", desc: "Save an article, video, or post", Icon: Link2 },
+  { id: "note", label: "Note", desc: "Write a quick note", Icon: PenLine },
+  { id: "voice", label: "Voice", desc: "Record a voice note", Icon: Mic },
+  { id: "click-picture", label: "Camera", desc: "Take a photo", Icon: Camera },
+  { id: "add-picture", label: "File", desc: "Upload a PDF, DOCX, TXT, or image", Icon: FileText },
 ] as const;
 
-type EntryId = (typeof ENTRY_POINTS)[number]["id"] | "add-picture";
+type EntryId = (typeof ENTRY_POINTS)[number]["id"];
 
 const ROW_ICON: Record<string, typeof FileText> = {
   note: PenLine,
@@ -221,10 +221,7 @@ export function Save() {
 
   return (
     <div className="max-w-[600px] mx-auto px-6 flex flex-col gap-6">
-      <div>
-        <h2 className="font-heading text-text-primary text-2xl font-bold">Save to Mind</h2>
-        <p className="text-text-secondary text-sm mt-1">Capture instant thoughts, sights, and sounds.</p>
-      </div>
+      <h2 className="font-heading text-text-primary text-2xl font-bold">Save</h2>
 
       <input
         ref={cameraInputRef}
@@ -255,106 +252,54 @@ export function Save() {
         )}
       </AnimatePresence>
 
-      <div className="grid grid-cols-2 gap-3">
-        {ENTRY_POINTS.map(({ id, label, desc, Icon }) => {
-          const isRecording = id === "voice" && recording;
-          return (
-            <motion.button
-              key={id}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => handleTileTap(id)}
-              disabled={uploading}
-              title={desc}
-              className={`min-h-[124px] border rounded-2xl flex flex-col items-start text-left p-4 gap-1.5 transition-colors disabled:opacity-50 ${
-                isRecording ? "bg-tint border-accent ring-2 ring-accent/30" : "bg-surface border-line hover:border-accent/40"
-              }`}
-              style={{ boxShadow: "var(--shadow-card)" }}
-            >
-              {isRecording ? (
-                <>
-                  <div className="w-full flex items-center justify-between">
-                    <span className="w-10 h-10 rounded-full bg-accent text-accent-contrast flex items-center justify-center">
-                      <Square size={15} fill="currentColor" />
-                    </span>
-                    <span className="font-heading text-xl font-semibold tabular-nums">{formatClock(recordingSeconds)}</span>
-                  </div>
-                  <div className="flex items-center gap-[3px] h-5 mt-2.5" aria-hidden>
-                    {[6, 12, 18, 10, 16, 8, 14, 20, 9, 13, 7, 11, 16, 6].map((h, i) => (
-                      <motion.span
-                        key={i}
-                        className="w-[3px] rounded-sm bg-accent"
-                        style={{ height: h }}
-                        animate={{ opacity: [0.4, 1, 0.4] }}
-                        transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.06 }}
-                      />
-                    ))}
-                  </div>
-                  <span className="font-body text-accent-ink text-xs font-semibold uppercase tracking-wide pt-1">
-                    Recording... tap to stop
-                  </span>
-                </>
-              ) : (
-                <>
-                  <span className="w-10 h-10 rounded-full bg-tint text-accent-ink flex items-center justify-center mb-auto">
-                    <Icon size={20} strokeWidth={1.75} />
-                  </span>
-                  <span className="font-body text-text-primary text-sm font-semibold uppercase tracking-wide pt-3">
-                    {label}
-                  </span>
-                  <span className="font-body text-text-secondary text-xs leading-snug">{desc}</span>
-                </>
-              )}
-            </motion.button>
-          );
-        })}
-
-        <motion.button
-          key="add-picture"
-          whileTap={{ scale: 0.97 }}
-          onClick={() => handleTileTap("add-picture")}
-          disabled={uploading}
-          title="Upload a file from your device"
-          className="col-span-2 bg-surface border border-line rounded-2xl p-4 flex items-center gap-3.5 disabled:opacity-50 hover:border-accent/40 transition-colors"
-          style={{ boxShadow: "var(--shadow-card)" }}
-        >
-          <span className="w-10 h-10 shrink-0 rounded-full bg-tint text-accent-ink flex items-center justify-center">
-            <FileText size={20} strokeWidth={1.75} />
-          </span>
-          <span className="flex-1 flex flex-col gap-0.5 text-left">
-            <span className="font-body text-text-primary text-sm font-semibold uppercase tracking-wide">Document</span>
-            <span className="font-body text-text-secondary text-xs">Upload a file from your device</span>
-          </span>
-          <span className="font-body text-text-secondary text-[11px] text-right leading-tight shrink-0">
-            PDF, DOCX,
-            <br />
-            TXT, image
-          </span>
-        </motion.button>
+      <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-5 gap-2">
+          {ENTRY_POINTS.map(({ id, label, desc, Icon }) => {
+            const isRecording = id === "voice" && recording;
+            return (
+              <motion.button
+                key={id}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => handleTileTap(id)}
+                disabled={uploading}
+                title={desc}
+                className="flex flex-col items-center gap-2 py-1 disabled:opacity-50"
+              >
+                <span
+                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
+                    isRecording ? "bg-accent text-accent-contrast" : "bg-tint text-accent-ink"
+                  }`}
+                >
+                  {isRecording ? <Square size={16} fill="currentColor" /> : <Icon size={20} strokeWidth={1.75} />}
+                </span>
+                <span className="font-body text-text-primary text-xs font-medium">
+                  {isRecording ? <span className="tabular-nums">{formatClock(recordingSeconds)}</span> : label}
+                </span>
+              </motion.button>
+            );
+          })}
+        </div>
+        {recording && (
+          <p className="text-accent-ink text-xs font-medium text-center">Recording… tap the mic again to stop</p>
+        )}
       </div>
 
       <div className="flex flex-col gap-3 pt-1">
         <div className="flex items-center justify-between">
-          <div className="flex flex-col gap-0.5">
-            <h3 className="font-heading text-text-primary text-lg font-semibold">Library</h3>
-            <p className="text-text-secondary text-sm">Recent captures</p>
-          </div>
-          <Link
-            to="/library"
-            className="h-9 rounded-full bg-surface flex items-center gap-1.5 px-3.5 text-accent-ink text-sm font-medium shrink-0"
-          >
+          <h3 className="font-heading text-text-primary text-lg font-semibold">Recent</h3>
+          <Link to="/library" className="text-accent-ink text-sm font-medium hover:underline">
             View all
-            <ArrowRight size={15} />
           </Link>
         </div>
 
         {recentItems.length > 0 && (
-          <div className="bg-surface border border-line rounded-2xl flex flex-col" style={{ boxShadow: "var(--shadow-card)" }}>
+          <div className="flex flex-col">
             {recentItems.map((item, index) => {
               const Icon = ROW_ICON[item.source_type] ?? FileText;
               return (
                 <div key={item.id}>
-                  {index > 0 && <div className="h-px bg-line ml-16" />}
-                  <Link to={`/library/${item.id}`} className="flex gap-3 items-center px-4 py-3 hover:bg-tint/40 transition-colors rounded-2xl">
+                  {index > 0 && <div className="h-px bg-line ml-12" />}
+                  <Link to={`/library/${item.id}`} className="flex gap-3 items-center py-3 hover:opacity-80 transition-opacity">
                     <span className="w-9 h-9 shrink-0 rounded-[10px] bg-tint text-accent-ink flex items-center justify-center">
                       <Icon size={17} strokeWidth={1.75} />
                     </span>
@@ -381,7 +326,7 @@ export function Save() {
 
       <AnimatePresence>
         {openModal === "note" && (
-          <Sheet title="Quick Note" onClose={() => setOpenModal(null)}>
+          <Sheet title="Quick Note" centered onClose={() => setOpenModal(null)}>
             <form onSubmit={handleNoteSubmit} className="flex flex-col gap-4">
               <input
                 type="text"
@@ -395,7 +340,7 @@ export function Save() {
                 value={noteContent}
                 onChange={(e) => setNoteContent(e.target.value)}
                 placeholder="Write it down before it's gone..."
-                rows={5}
+                rows={8}
                 className="bg-bg border border-line rounded-lg px-4 py-3 text-text-primary outline-none focus:ring-2 focus:ring-accent resize-none"
               />
               <motion.button
@@ -411,7 +356,7 @@ export function Save() {
         )}
 
         {openModal === "link" && (
-          <Sheet title="Paste Link" onClose={() => setOpenModal(null)}>
+          <Sheet title="Paste Link" centered onClose={() => setOpenModal(null)}>
             <form onSubmit={handleLinkSubmit} className="flex flex-col gap-4">
               <input
                 autoFocus

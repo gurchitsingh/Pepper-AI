@@ -19,17 +19,20 @@ export function AppLayout() {
             <Mark size={26} />
             <span className="font-heading text-text-primary text-lg font-semibold tracking-tight">Pepper</span>
           </Link>
-          <Link to="/settings" className="shrink-0" aria-label="Settings">
-            <span className="w-8 h-8 rounded-full bg-surface border border-text-secondary/15 flex items-center justify-center text-text-secondary overflow-hidden">
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-              ) : user?.name || user?.email ? (
-                <span className="font-heading text-sm font-semibold">{initial}</span>
-              ) : (
-                <User size={16} />
-              )}
-            </span>
-          </Link>
+          {/* Settings already shows the profile, so skip the duplicate avatar there. */}
+          {location.pathname !== "/settings" && (
+            <Link to="/settings" className="shrink-0" aria-label="Settings">
+              <span className="w-8 h-8 rounded-full bg-surface border border-text-secondary/15 flex items-center justify-center text-text-secondary overflow-hidden">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : user?.name || user?.email ? (
+                  <span className="font-heading text-sm font-semibold">{initial}</span>
+                ) : (
+                  <User size={16} />
+                )}
+              </span>
+            </Link>
+          )}
         </div>
       </header>
       {/* Opacity-only: Chatbot uses a fixed-positioned inner element, and a

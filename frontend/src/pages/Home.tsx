@@ -15,11 +15,12 @@ import {
 } from "lucide-react";
 import * as api from "../api/endpoints";
 import { ApiError } from "../api/client";
-import type { SavedItem } from "../api/types";
+import type { Insights, SavedItem } from "../api/types";
 import { computeStreak } from "./streak";
 import { SavedItemCard } from "../components/SavedItemCard";
 import { ExpandableSearch } from "../components/ExpandableSearch";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { useAuth } from "../auth/AuthContext";
 
 const listVariants = {
   hidden: {},
@@ -132,10 +133,7 @@ function StreakCard({ items }: { items: SavedItem[] }) {
   const week = computeWeek(items);
 
   return (
-    <div
-      className="rounded-2xl p-4 flex flex-col gap-3.5 bg-surface border border-line"
-      style={{ boxShadow: "var(--shadow-card)" }}
-    >
+    <div className="flex flex-col gap-3.5">
       {streak > 0 ? (
         <div className="flex items-center gap-2">
           <Flame size={20} className="text-accent-ink" />
@@ -146,7 +144,7 @@ function StreakCard({ items }: { items: SavedItem[] }) {
       ) : (
         <div className="flex items-center gap-2">
           <Flame size={20} className="text-text-secondary" />
-          <span className="text-text-primary text-[15px]">Save something today to start a streak</span>
+          <span className="text-text-secondary text-[15px]">No streak yet</span>
         </div>
       )}
       <div className="grid grid-cols-7 gap-1">
@@ -164,6 +162,48 @@ function StreakCard({ items }: { items: SavedItem[] }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function StatsStrip({ insights }: { insights: Insights }) {
+  const thisWeek = insights.trend.slice(-7).reduce((sum, p) => sum + p.count, 0);
+  const folders = insights.by_folder.filter((f) => f.folder_id !== null).length;
+  const stats = [
+    { label: "Total saves", value: insights.total_items },
+    { label: "This week", value: thisWeek },
+    { label: "Folders", value: folders },
+  ];
+
+  const trend = insights.trend;
+  const max = Math.max(1, ...trend.map((p) => p.count));
+  const points = trend
+    .map((p, i) => `${(i / (trend.length - 1)) * 100},${28 - (p.count / max) * 26}`)
+    .join(" ");
+
+  return (
+    <Link to="/insights" className="flex flex-col gap-3" aria-label="View insights">
+      <div className="grid grid-cols-3 divide-x divide-line">
+        {stats.map((s) => (
+          <div key={s.label} className="flex flex-col items-center gap-0.5 px-2">
+            <span className="font-heading text-text-primary text-2xl font-bold">{s.value}</span>
+            <span className="text-text-secondary text-[11px] font-medium uppercase tracking-widest">{s.label}</span>
+          </div>
+        ))}
+      </div>
+      {trend.length > 1 && (
+        <svg viewBox="0 0 100 30" preserveAspectRatio="none" className="w-full h-8 text-accent-ink" aria-hidden>
+          <polyline
+            points={points}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={1.5}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      )}
+    </Link>
   );
 }
 
@@ -189,8 +229,7 @@ function HomeFeedItem({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.25 }}
-      className="rounded-2xl bg-surface border border-line flex flex-col gap-3 p-4"
-      style={{ boxShadow: "var(--shadow-card)" }}
+      className="flex flex-col gap-2 py-3.5 border-b border-line last:border-b-0"
     >
       <Link to={`/library/${item.id}`} className="flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-tint text-accent-ink flex items-center justify-center shrink-0">
@@ -220,7 +259,7 @@ function HomeFeedItem({
         <button
           type="button"
           onClick={() => onAsk(item)}
-          className="flex items-center gap-2 pt-3 border-t border-line text-left"
+          className="flex items-center gap-2 pl-[52px] text-left"
         >
           <MessageCircle size={15} className="text-accent-ink shrink-0" />
           <span className="flex-1 text-accent-ink text-[13px] font-medium leading-snug">{question}</span>
@@ -233,7 +272,11 @@ function HomeFeedItem({
 export function Home() {
   const [items, setItems] = useState<SavedItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [insights, setInsights] = useState<Insights | null>(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const firstName =
+    user?.name?.trim().split(/\s+/)[0] || user?.username || user?.email.split("@")[0] || "";
 
   const [query, setQuery] = useState("");
   const debouncedQuery = useDebouncedValue(query.trim(), 300);
@@ -246,6 +289,11 @@ export function Home() {
       .listSavedItems()
       .then(setItems)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load saves"));
+    // Stats are a nice-to-have; the dashboard still renders without them.
+    api
+      .getInsights()
+      .then(setInsights)
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -283,11 +331,15 @@ export function Home() {
   }
 
   return (
-    <div className="max-w-[600px] mx-auto px-6 flex flex-col gap-5">
-      <div className="flex justify-end">
+    <div className="max-w-[600px] mx-auto px-6 flex flex-col gap-6">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="font-heading text-text-primary text-2xl font-bold truncate">
+          {firstName ? `Hello, ${firstName}` : "Hello"}
+        </h1>
         <ExpandableSearch value={query} onChange={setQuery} placeholder="Search your saves..." />
       </div>
 
+      {!isSearchMode && insights && insights.total_items > 0 && <StatsStrip insights={insights} />}
       {!isSearchMode && <StreakCard items={items ?? []} />}
 
       {isSearchMode ? (
@@ -320,7 +372,7 @@ export function Home() {
           {error && <p className="text-error text-sm">{error}</p>}
           {items === null && !error && <p className="text-text-secondary text-sm">Loading...</p>}
           {items?.length === 0 && (
-            <p className="text-text-secondary text-sm">Nothing here yet — save something and it'll show up below.</p>
+            <p className="text-text-secondary text-sm">Nothing saved yet.</p>
           )}
 
           <motion.div layout variants={listVariants} initial="hidden" animate="show" className="flex flex-col gap-5">
@@ -330,7 +382,7 @@ export function Home() {
                   <span className="text-text-secondary text-[11px] font-medium uppercase tracking-widest">
                     {group.label}
                   </span>
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col">
                     {group.items.map((item) => (
                       <HomeFeedItem
                         key={item.id}

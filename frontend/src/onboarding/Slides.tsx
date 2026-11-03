@@ -180,7 +180,7 @@ export function Slides() {
           Get Started
           <ArrowRight size={18} />
         </button>
-        <p className="text-text-secondary/70 text-xs pb-8">Intellectual calm for focused minds.</p>
+        <div className="pb-8" />
       </div>
     </div>
   );

@@ -113,7 +113,7 @@ export function Preferences() {
         <section className="flex flex-col gap-4">
           <div>
             <h2 className="font-heading text-text-primary text-2xl font-semibold">What fuels your mind?</h2>
-            <p className="text-text-secondary text-sm mt-1">Select at least {MIN_TOPICS} topics to calibrate your AI.</p>
+            <p className="text-text-secondary text-sm mt-1">Pick at least {MIN_TOPICS}.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             {TOPICS.map((topic) => {

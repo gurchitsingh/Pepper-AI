@@ -6,14 +6,14 @@ import { updateMe } from "../api/endpoints";
 import { useAuth } from "../auth/AuthContext";
 
 const SOURCES = [
-  { label: "Instagram", desc: "Reels and stories", Icon: Camera },
-  { label: "A friend or classmate", desc: "Word of mouth", Icon: Users },
-  { label: "College club or fest", desc: "Talks, stalls and posters", Icon: Ticket },
-  { label: "YouTube", desc: "Videos and reviews", Icon: CirclePlay },
-  { label: "LinkedIn", desc: "Professional network", Icon: Briefcase },
-  { label: "Google", desc: "Search & Discovery", Icon: Search },
-  { label: "ChatGPT or Claude", desc: "AI recommendations", Icon: Sparkles },
-  { label: "Other", desc: "Somewhere else", Icon: Ellipsis },
+  { label: "Instagram", Icon: Camera },
+  { label: "A friend or classmate", Icon: Users },
+  { label: "College club or fest", Icon: Ticket },
+  { label: "YouTube", Icon: CirclePlay },
+  { label: "LinkedIn", Icon: Briefcase },
+  { label: "Google", Icon: Search },
+  { label: "ChatGPT or Claude", Icon: Sparkles },
+  { label: "Other", Icon: Ellipsis },
 ] as const;
 
 export function ReferralSource() {
@@ -39,13 +39,10 @@ export function ReferralSource() {
 
   return (
     <div className="min-h-screen flex flex-col px-6 py-12 max-w-sm mx-auto gap-8">
-      <div>
-        <h1 className="font-heading text-text-primary text-2xl font-bold mb-1">How did you find us?</h1>
-        <p className="text-text-secondary text-sm">Help us understand how the word is spreading.</p>
-      </div>
+      <h1 className="font-heading text-text-primary text-2xl font-bold">How did you find us?</h1>
 
       <div className="flex flex-col gap-2.5">
-        {SOURCES.map(({ label, desc, Icon }) => {
+        {SOURCES.map(({ label, Icon }) => {
           const isSelected = selected === label;
           return (
             <button
@@ -55,10 +52,7 @@ export function ReferralSource() {
                 isSelected ? "bg-accent/10 border-accent" : "bg-surface border-text-secondary/15"
               }`}
             >
-              <div className="text-left">
-                <p className="text-text-primary font-semibold text-sm">{label}</p>
-                <p className="text-text-secondary text-xs">{desc}</p>
-              </div>
+              <p className="text-text-primary font-semibold text-sm text-left">{label}</p>
               <Icon size={18} className={isSelected ? "text-accent" : "text-text-secondary"} />
             </button>
           );

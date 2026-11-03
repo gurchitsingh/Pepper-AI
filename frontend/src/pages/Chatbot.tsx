@@ -405,14 +405,9 @@ export function Chatbot() {
               {messages.length === 0 && (
                 <div className="flex items-start gap-3">
                   <Mark size={32} className="shrink-0 mt-0.5" />
-                  <div className="glass-card rounded-2xl p-5 flex flex-col gap-2 min-w-0">
-                    <p className="font-heading text-text-primary text-lg font-semibold">
-                      {timeOfDayGreeting()} I'm Pepper.
-                    </p>
-                    <p className="text-text-secondary text-sm">
-                      Ask me anything about what you've saved, or just say hello — I'm around either way.
-                    </p>
-                  </div>
+                  <p className="font-heading text-text-primary text-lg font-semibold pt-0.5 min-w-0">
+                    {timeOfDayGreeting()} Ask me about anything you've saved.
+                  </p>
                 </div>
               )}
 
