@@ -84,6 +84,48 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/profile-picture-crop/frontend && npm run dev -- --port 3102 --strictPort"],
       "port": 3102
+    },
+    {
+      "name": "fix-documents-ingestion-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-wt/fix-documents-ingestion/frontend && npm run dev -- --port 3105 --strictPort"],
+      "port": 3105
+    },
+    {
+      "name": "feat-logo-icons-splash-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-wt/feat-logo-icons-splash/frontend && npm run dev -- --port 3106 --strictPort"],
+      "port": 3106
+    },
+    {
+      "name": "fix-header-logo-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-wt/fix-header-logo/frontend && npm run dev -- --port 3110 --strictPort"],
+      "port": 3110
+    },
+    {
+      "name": "feat-email-verification-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-wt/feat-email-verification/frontend && npm run dev -- --port 3100 --strictPort"],
+      "port": 3100
+    },
+    {
+      "name": "audit-main-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-parallel/audit-main/frontend && npm run dev -- --port 3101 --strictPort"],
+      "port": 3101
+    }
+    ,{
+      "name": "redesign-gallery-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-wt/redesign-gallery/frontend && npm run dev -- --port 3001 --strictPort"],
+      "port": 3001
+    }
+    ,{
+      "name": "declutter-ui-frontend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd /Users/mac/pepper-wt/declutter-ui/frontend && npm run dev -- --port 3001 --strictPort"],
+      "port": 3001
     }
   ]
 }
