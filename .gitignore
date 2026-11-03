@@ -9,3 +9,7 @@ stitch_cyrus_knowledge_companion/
 tessdata_local/
 Design/
 *.zip
+.claude/settings.local.json
+logo-1d/
+pepper-ai-mobile-app-design/
+.claude/settings.local.json
